@@ -101,7 +101,7 @@ ui5-switch:not([hidden]) {
 .ui5-switch-desktop.ui5-switch-wrapper:focus::after {
 	content: "";
 	position: absolute;
-	left: -var(--_ui5_switch_outline);
+	left: calc(-1 * var(--_ui5_switch_outline));
 	top: 0;
 	bottom: 0;
 	width: 100%;
