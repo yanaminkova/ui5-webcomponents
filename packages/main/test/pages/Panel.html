@@ -22,11 +22,8 @@
 	</script>
 
 	<script src="../../webcomponentsjs/webcomponents-loader.js"></script>
-	<script src="../../resources/bundle.esm.js" type="module">
-	</script>
-
-	<script nomodule src="../../resources/bundle.es5.js">
-	</script>
+	<script src="../../resources/bundle.esm.js" type="module"></script>
+	<script nomodule src="../../resources/bundle.es5.js"></script>
 
 	<script>
 		document.addEventListener("DOMContentLoaded", function () {
@@ -54,7 +51,7 @@
 	</script>
 </head>
 
-<body>
+<body style="background-color: var(--sapBackgroundColor);">
 
 <style>
 	ui5-panel {
@@ -68,7 +65,6 @@
 	}
 </style>
 
-
 	<ui5-panel id="p1" collapsed accessible-role="Complementary">
 
 		<!-- Panel header -->
@@ -81,9 +77,10 @@
 		</div>
 
 		<!-- Content -->
-        This is my panel <!-- fafa --> <br>
+		This is my panel <!-- fafa --> <br>
 		<ui5-title id="p1-content1">Lorem ipsum!</ui5-title>
 		<ui5-label id="p1-content2" wrap>
+			<span>
 			Lorem ipsum dolor sit amet, tamquam invidunt cu sed, unum regione mel ea, quo ea alia novum. Ne qui illud zril
 			nostrum, vel ea sint dicant postea. Vel ne facete tritani, neglegentur concludaturque sed te. His animal dolorum ut.
 			Aeterno appareat ei mei, cu sed elit scripserit, an quodsi oportere accusamus quo. Pri ea probo corpora rationibus,
@@ -100,18 +97,20 @@
 			sensibus duo.
 			Vis cu commodo definiebas, postea dissentias ne vim. Modo homero eos ad. Ut vix equidem temporibus. At duo audire
 			volumus, id volumus rationibus vim. Sit ne diam volumus. Augue labitur mel cu, an eam omnis causae hendrerit.
+			</span>
 		</ui5-label>
 
 	</ui5-panel>
 
 	<br>
 
-	<ui5-panel accessible-role="Complementary" header-text="Both expandable and expanded">
+	<ui5-panel id="panel-expandable" accessible-role="Complementary" header-text="Both expandable and expanded">
 
 
 		<!-- Content -->
 		<ui5-title>Lorem ipsum!</ui5-title>
 		<ui5-label wrap>
+			<span>
 			Lorem ipsum dolor sit amet, tamquam invidunt cu sed, unum regione mel ea, quo ea alia novum. Ne qui illud zril
 			nostrum, vel ea sint dicant postea. Vel ne facete tritani, neglegentur concludaturque sed te. His animal dolorum ut.
 			Aeterno appareat ei mei, cu sed elit scripserit, an quodsi oportere accusamus quo. Pri ea probo corpora rationibus,
@@ -128,13 +127,14 @@
 			sensibus duo.
 			Vis cu commodo definiebas, postea dissentias ne vim. Modo homero eos ad. Ut vix equidem temporibus. At duo audire
 			volumus, id volumus rationibus vim. Sit ne diam volumus. Augue labitur mel cu, an eam omnis causae hendrerit.
+			</span>
 		</ui5-label>
 
 	</ui5-panel>
 
 	<br>
 
-	<ui5-panel fixed accessible-role="Complementary" header-text="Expanded, but not expandable">
+	<ui5-panel id="panel-fixed" fixed accessible-role="Complementary" header-text="Expanded, but not expandable">
 
 		<!-- Content -->
 		<ui5-title>Lorem ipsum!</ui5-title>

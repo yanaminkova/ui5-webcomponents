@@ -24,7 +24,7 @@ const metadata = {
 	properties: /** @lends sap.ui.webcomponents.main.TableColumn.prototype */ {
 
 		/**
-		 * Defines the minimum screen width required to display this column. By default it is always displayed.
+		 * Defines the minimum table width required to display this column. By default it is always displayed.
 		 * <br><br>
 		 * The responsive behavior of the <code>ui5-table</code> is determined by this property. As an example, by setting
 		 * <code>minWidth</code> property to <code>40em</code> shows this column on tablet (and desktop) but hides it on mobile.
@@ -32,6 +32,7 @@ const metadata = {
 		 * For further responsive design options, see <code>demandPopin</code> property.
 		 *
 		 * @type {number}
+		 * @defaultvalue Infinity
 		 * @public
 		 */
 		minWidth: {
@@ -43,7 +44,7 @@ const metadata = {
 		 * The text for the column when it pops in.
 		 *
 		 * @type {string}
-		 * @defaultvalue: ""
+		 * @defaultvalue ""
 		 * @public
 		 */
 		popinText: {
@@ -65,21 +66,21 @@ const metadata = {
 		},
 
 		/**
-		 * @protected
+		 * @private
 		 */
 		first: {
 			type: Boolean,
 		},
 
 		/**
-		 * @protected
+		 * @private
 		 */
 		last: {
 			type: Boolean,
 		},
 
 		/**
-		 * @protected
+		 * @private
 		 */
 		sticky: {
 			type: Boolean,

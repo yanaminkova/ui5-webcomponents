@@ -1,9 +1,15 @@
 const list = require("../pageobjects/ListTestPage");
-const assert = require("assert");
+const assert = require("chai").assert;
 
-describe("Date Picker Tests", () => {
+describe("List Tests", () => {
 	before(() => {
 		browser.url("http://localhost:8080/test-resources/pages/List_test_page.html");
+	});
+
+	it("List is rendered", () => {
+		const list = browser.$("ui5-list").shadow$(".ui5-list-root");
+		
+		assert.ok(list, "List is rendered");
 	});
 
 	it("itemPress and selectionChange events are fired", () => {
@@ -18,7 +24,6 @@ describe("Date Picker Tests", () => {
 	});
 
 	it("selectionChange events provides previousSelection item", () => {
-		const list = $("#listEvents");
 		const selectionChangeResultPreviousItemsParameter = $("#selectionChangeResultPreviousItemsParameter");
 		const firstItem = $("#listEvents #country1");
 		const secondItem = $("#listEvents #country2");
@@ -28,22 +33,63 @@ describe("Date Picker Tests", () => {
 		assert.strictEqual(secondItem.getProperty("id"), selectionChangeResultPreviousItemsParameter.getProperty("value"));
 	});
 
-	it("selectionChange using selection component", () => {
-		const fieldResult = $("#fieldMultiSelResult");
-		const firstItem = $("#listMultiSel #option1");
-		const firstItemSelectionComponent = $("#listMultiSel #option1").shadow$(".ui5-li-multisel-cb");
+	it("No data text is shown", () => {
+		const noDataText = browser.$("#no-data-list").shadow$(".ui5-list-nodata-text");
 
-		firstItemSelectionComponent.click();
-
-		assert.ok(firstItem.getProperty("selected"), "item is selected");
-		assert.strictEqual(fieldResult.getProperty("value"), "true");
+		assert.ok(noDataText, "No data text is shown");
 	});
 
-	it("header text", () => {
+	it("Tests header text", () => {
 		list.id = "#list1";
 
 		assert.ok(list.header.hasClass("ui5-list-header"), "header has the right classes");
 		assert.ok(list.header.getHTML(false), "API: GroupHeaderListItem");
+	});
+
+	it("Tests header slot", () => {
+		const headerSlotContent = browser.execute(() => {
+			return document.getElementById("header-slot-list").shadowRoot.querySelector("slot[name='header']").assignedNodes()[0].querySelector("#header-slot-title");
+		});
+
+		assert.ok(headerSlotContent, "header slot content is rendered");
+	});
+
+	it("Test default slot", () => {
+		const listItemsLength = browser.execute(() => {
+			const slots = document.getElementById("default-slot-test").shadowRoot.querySelector("slot").assignedNodes();
+
+			const result = slots.filter(slot => {
+				return slot.tagName === "UI5-LI";
+			});
+
+			return result.length;
+		});
+		
+		assert.strictEqual(listItemsLength, 3, "List items are rendered");
+	});
+
+	it("Clicking on inactive items does not change single selection", () => {
+		list.id = "#inactiveSingleSelect";
+		const firstItem = list.getItem(0);
+		const secondItem = list.getItem(1);
+
+		firstItem.click();
+		secondItem.click();
+
+		assert.ok(!firstItem.getAttribute("selected"), "The first item is not selected");
+		assert.ok(!secondItem.getAttribute("selected"), "The second item is notselected");
+	});
+
+	it("Clicking on inactive items does not change multi selection", () => {
+		list.id = "#inactiveMultiSelect";
+		const firstItem = list.getItem(0);
+		const secondItem = list.getItem(1);
+
+		firstItem.click();
+		secondItem.click();
+
+		assert.ok(!firstItem.getAttribute("selected"), "The first item is not selected");
+		assert.ok(!secondItem.getAttribute("selected"), "The second item is notselected");
 	});
 
 	it("mode: none. clicking item does not select it", () => {
@@ -158,5 +204,25 @@ describe("Date Picker Tests", () => {
 		firstListItem.keys("ArrowLeft");
 
 		assert.ok(firstListItem.isFocused(), "First item remains focussed");
+	});
+
+	it("tests 'loadMore' event fired upon infinite scroll", () => {
+		const btn = $("#btnTrigger");
+		const loadMoreResult = $("#loadMoreResult");
+
+		btn.click();
+		browser.pause(1000);
+
+		assert.strictEqual(loadMoreResult.getAttribute("value"), "1", "The event loadMore is fired.");
+	});
+
+	it("detailPress event is fired", () => {
+		const detailCounterResult = $("#detailPressCounter");
+		const firstItem = $("#detailListItem");
+		const detailButton = firstItem.shadow$(".ui5-li-detailbtn")
+
+		detailButton.click();
+
+		assert.strictEqual(detailCounterResult.getProperty("innerHTML"), "1", "detailClick event has been fired once");
 	});
 });

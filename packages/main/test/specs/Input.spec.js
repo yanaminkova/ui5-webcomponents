@@ -1,7 +1,70 @@
-const assert = require("assert");
+const assert = require("chai").assert;
+
+describe("Attributes propagation", () => {
+	browser.url("http://localhost:8080/test-resources/pages/Input.html");
+
+	it("Should change the placeholder of the inner input", () => {
+		const input = $("#myInput");
+		const sExpected = "New placeholder text";
+
+		browser.execute(() => {
+			input.setAttribute("placeholder", "New placeholder text");
+		});
+
+		assert.strictEqual(input.shadow$("input").getProperty("placeholder"), sExpected, "The placeholder was set correctly");
+	});
+
+	it("Disabled attribute is propagated properly", () => {
+		assert.ok(browser.$("#input-disabled").shadow$(".ui5-input-inner").getAttribute("disabled"), "Disabled property was propagated");
+	});
+
+	it("Redonly attribute is propagated properly", () => {
+		assert.ok(browser.$("#input-readonly").shadow$(".ui5-input-inner").getAttribute("readonly"), "Readonly property was propagated");
+	});
+
+	it("Required attribute is propagated properly", () => {
+		assert.ok(browser.$("#input-required").shadow$(".ui5-input-inner").getAttribute("required"), "Required property was propagated");
+	});
+
+	it("Type attribute is propagated properly", () => {
+		const sExpectedType = "number";
+		assert.strictEqual(browser.$("#input-number").shadow$(".ui5-input-inner").getAttribute("type"), sExpectedType, "Type property was propagated");
+	});
+
+	it("Value attribute is propagated properly", () => {
+		const sExpectedValue = "Test test";
+
+		browser.execute(() => {
+				document.getElementById("input3").value = "Test test";
+		});
+
+		assert.strictEqual(browser.$("#input3").shadow$(".ui5-input-inner").getValue(), sExpectedValue, "Value property was set correctly");
+	});
+
+	it("sets empty value to an input", () => {
+		const input1 = browser.$("#input1");
+		const innerInput = browser.$("#input1").shadow$("input");
+
+		input1.setProperty("value", "");
+
+		assert.strictEqual(input1.getValue(), "", "Property value should be empty");
+		assert.strictEqual(innerInput.getValue(), "", "Inner's property value should be empty");
+	});
+});
 
 describe("Input general interaction", () => {
 	browser.url("http://localhost:8080/test-resources/pages/Input.html");
+
+	it("Should open suggestions popover when focused", () => {
+		const input = $("#myInput2");
+		const staticAreaItemClassName = browser.getStaticAreaItemClassName("#myInput2");
+		const popover = browser.$(`.${staticAreaItemClassName}`).shadow$("ui5-responsive-popover");
+
+		// focus the input field which will display the suggestions
+		input.click();
+
+		assert.ok(popover.isDisplayedInViewport(), "The popover is visible");
+	});
 
 	it("fires change", () => {
 		const input1 = $("#input1").shadow$("input");
@@ -71,12 +134,15 @@ describe("Input general interaction", () => {
 		let item;
 		const suggestionsInput = $("#myInput").shadow$("input");
 		const inputResult = $("#inputResult").shadow$("input");
-		const popover = $("#myInput").shadow$("ui5-popover");
+		const staticAreaItemClassName = browser.getStaticAreaItemClassName("#myInput")
+		const popover = browser.$(`.${staticAreaItemClassName}`).shadow$("ui5-responsive-popover");
 
 		suggestionsInput.click();
 		suggestionsInput.keys("p");
 
 		assert.ok(popover.getProperty("opened"), "suggestions are opened.");
+
+		// This test is passing when the test is executed on browser that is NOT headless
 
 		// item = $("#myInput").$$("ui5-li")[0];
 
@@ -109,6 +175,7 @@ describe("Input general interaction", () => {
 		assert.strictEqual(suggestionsInput.getValue(), "Cozy", "First item has been selected");
 		assert.strictEqual(inputResult.getValue(), "1", "suggestionItemSelected event called once");
 
+		suggestionsInput.keys("c"); // to open the suggestions pop up once again 
 		suggestionsInput.keys("ArrowUp");
 
 		assert.strictEqual(suggestionsInput.getValue(), "Condensed", "First item has been selected");
@@ -118,21 +185,21 @@ describe("Input general interaction", () => {
 		assert.strictEqual(inputResult.getValue(), "1", "suggestionItemSelect is fired once");
 	});
 
-	/*
-	it("sets empty value to an input", () => {
-		const input1 = browser.$("#input1");
-		const innerInput = browser.$("#input1").shadow$("input");
+	it("handles group suggestion item via keyboard", () => {
+		const suggestionsInput = $("#myInputGrouping").shadow$("input");
+		const inputResult = $("#inputResultGrouping").shadow$("input");
 
-		input1.setProperty("value", "");
+		suggestionsInput.click();
+		suggestionsInput.keys("ArrowDown");
+		suggestionsInput.keys("Enter");
 
-		assert.strictEqual(input1.getValue(), "", "Property value should be empty");
-		assert.strictEqual(innerInput.getValue(), "", "Inner's property value should be empty");
+		assert.strictEqual(suggestionsInput.getValue(), "", "Group item is not selected");
+		assert.strictEqual(inputResult.getValue(), "", "suggestionItemSelected event is not called");
 	});
-	*/
 
 	it("Input's maxlength property is set correctly", () => {
-		const input5 = $("#myInput5");
-		const inputShadowRef = $("#myInput5").shadow$("input");
+		const input5 = $("#input-tel");
+		const inputShadowRef = $("#input-tel").shadow$("input");
 
 		inputShadowRef.click();
 
@@ -143,5 +210,15 @@ describe("Input general interaction", () => {
 		assert.strictEqual(inputShadowRef.getProperty("value").length, 10, "Input's value should not exceed 10 characters.");
 		assert.ok(input5.getProperty("maxlength"), "Input's maxlength property should be applied.");
 		assert.strictEqual(inputShadowRef.getAttribute("maxlength"), "10", "Input's maxlength attribute should be applied.");
+	});
+
+	it("Checks if valueStateMessage is shown", () => {
+		let inputShadowRef = browser.$("#input2").shadow$("input");
+		let staticAreaItemClassName = browser.getStaticAreaItemClassName("#input2");
+		let popover = browser.$(`.${staticAreaItemClassName}`).shadow$("ui5-popover");
+
+		inputShadowRef.click();
+		
+		assert.ok(popover.getProperty("opened"), "Popover with valueStateMessage should be opened.");
 	});
 });

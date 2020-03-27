@@ -1,7 +1,6 @@
 import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
 import litRender from "@ui5/webcomponents-base/dist/renderer/LitRenderer.js";
-import getShadowDOMTarget from "@ui5/webcomponents-base/dist/events/getShadowDOMTarget.js";
-import { isSpace, isEnter } from "@ui5/webcomponents-base/dist/events/PseudoEvents.js";
+import { isSpace, isEnter } from "@ui5/webcomponents-base/dist/Keys.js";
 import { getRTL } from "@ui5/webcomponents-base/dist/config/RTL.js";
 import "@ui5/webcomponents-icons/dist/icons/slim-arrow-left.js";
 import "@ui5/webcomponents-icons/dist/icons/slim-arrow-right.js";
@@ -34,6 +33,12 @@ const metadata = {
 		_btn2: {
 			type: Object,
 		},
+		_isNextButtonDisabled: {
+			type: Boolean,
+		},
+		_isPrevButtonDisabled: {
+			type: Boolean,
+		},
 	},
 	events: {
 		pressPrevious: {},
@@ -41,7 +46,6 @@ const metadata = {
 		btn1Press: {},
 		btn2Press: {},
 	},
-	_eventHandlersByConvention: true,
 };
 
 class CalendarHeader extends UI5Element {
@@ -79,6 +83,16 @@ class CalendarHeader extends UI5Element {
 	onBeforeRendering() {
 		this._btn1.text = this.monthText;
 		this._btn2.text = this.yearText;
+		this._btnPrev.classes = "ui5-calheader-arrowbtn";
+		this._btnNext.classes = "ui5-calheader-arrowbtn";
+
+		if (this._isNextButtonDisabled) {
+			this._btnNext.classes += " ui5-calheader-arrowbtn-disabled";
+		}
+
+		if (this._isPrevButtonDisabled) {
+			this._btnPrev.classes += " ui5-calheader-arrowbtn-disabled";
+		}
 	}
 
 	_handlePrevPress(event) {
@@ -97,10 +111,9 @@ class CalendarHeader extends UI5Element {
 		this.fireEvent("btn2Press", event);
 	}
 
-	onkeydown(event) {
-		const eventTarget = getShadowDOMTarget(event);
+	_onkeydown(event) {
 		if (isSpace(event) || isEnter(event)) {
-			const showPickerButton = eventTarget.getAttribute("data-sap-show-picker");
+			const showPickerButton = event.target.getAttribute("data-sap-show-picker");
 
 			if (showPickerButton) {
 				this[`_show${showPickerButton}Picker`]();
@@ -112,13 +125,11 @@ class CalendarHeader extends UI5Element {
 		return getRTL() ? "rtl" : undefined;
 	}
 
-	static async define(...params) {
+	static async onDefine() {
 		await Promise.all([
 			await Button.define(),
 			await Icon.define(),
 		]);
-
-		super.define(...params);
 	}
 }
 

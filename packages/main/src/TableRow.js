@@ -10,10 +10,12 @@ import styles from "./generated/themes/TableRow.css.js";
  */
 const metadata = {
 	tag: "ui5-table-row",
+	managedSlots: true,
 	slots: /** @lends sap.ui.webcomponents.main.TableRow.prototype */ {
 		/**
 		 * Defines the cells of the <code>ui5-table-row</code>.
-		 * <br><b>Note:</b> Use <code>ui5-table-cell</code> for the intended design.
+		 * <br><br>
+		 * <b>Note:</b> Use <code>ui5-table-cell</code> for the intended design.
 		 *
 		 * @type {HTMLElement[]}
 		 * @slot
@@ -37,8 +39,9 @@ const metadata = {
 	},
 	events: /** @lends sap.ui.webcomponents.main.TableRow.prototype */ {
 		_focused: {},
+
+		_click: {},
 	},
-	_eventHandlersByConvention: true,
 };
 
 /**
@@ -93,13 +96,25 @@ class TableRow extends UI5Element {
 			// the focus remains on that element.
 			this._onfocusin(event, true /* force row focus */);
 		}
+
+		this.fireEvent("_click");
 	}
 
 	_getActiveElementTagName() {
 		return document.activeElement.localName.toLocaleLowerCase();
 	}
 
+	get shouldPopin() {
+		return this._columnsInfo.filter(el => {
+			return el.demandPopin;
+		}).length;
+	}
+
 	onBeforeRendering() {
+		if (!this.shouldPopin) {
+			return;
+		}
+
 		this.visibleCells = [];
 		this.popinCells = [];
 
@@ -135,21 +150,6 @@ class TableRow extends UI5Element {
 		if (lastVisibleCell) {
 			lastVisibleCell.lastInRow = true;
 		}
-	}
-
-	get styles() {
-		const gridTemplateColumns = this._columnsInfo.reduce((acc, info) => {
-			return info.visible ? `${acc}minmax(0, ${info.width || "1fr"}) ` : acc;
-		}, "");
-
-		return {
-			main: {
-				"grid-template-columns": gridTemplateColumns,
-			},
-			popin: {
-				"grid-column-end": 6,
-			},
-		};
 	}
 
 	get visibleCellsCount() {

@@ -1,6 +1,6 @@
-import { isSpace, isEnter } from "@ui5/webcomponents-base/dist/events/PseudoEvents.js";
-import { isDesktop } from "@ui5/webcomponents-core/dist/sap/ui/Device.js";
+import { isSpace, isEnter } from "@ui5/webcomponents-base/dist/Keys.js";
 import "@ui5/webcomponents-icons/dist/icons/decline.js";
+import "@ui5/webcomponents-icons/dist/icons/edit.js";
 import ListItemType from "./types/ListItemType.js";
 import ListMode from "./types/ListMode.js";
 import ListItemBase from "./ListItemBase.js";
@@ -18,21 +18,11 @@ const metadata = {
 	properties: /** @lends  sap.ui.webcomponents.main.ListItem.prototype */ {
 
 		/**
-		 * Defines the selected state of the <code>ListItem</code>.
-		 * @type {boolean}
-		 * @defaultvalue false
-		 * @public
-		 */
-		selected: {
-			type: Boolean,
-		},
-
-		/**
 		 * Defines the visual indication and behavior of the list items.
-		 * Available options are <code>Active</code> (by default) and <code>Inactive</code>.
+		 * Available options are <code>Active</code> (by default), <code>Inactive</code> and <code>Detail</code>.
 		 * <br><br>
 		 * <b>Note:</b> When set to <code>Active</code>, the item will provide visual response upon press and hover,
-		 * while with type <code>Inactive</code> - will not.
+		 * while with type <code>Inactive</code> and <code>Detail</code> - will not.
 		 *
 		 * @type {string}
 		 * @defaultvalue "Active"
@@ -70,8 +60,14 @@ const metadata = {
 		},
 	},
 	events: {
+		/**
+		 * Fired when the user clicks on the detail button when type is <code>Detail</code>.
+		 *
+		 * @event
+		 * @public
+		 */
+		detailClick: {},
 		_press: {},
-		_detailPress: {},
 		_focused: {},
 		_focusForward: {},
 	},
@@ -114,20 +110,19 @@ class ListItem extends ListItemBase {
 	}
 
 	onBeforeRendering(...params) {
-		const desktop = isDesktop();
-		const isActionable = (this.type === ListItemType.Active) && (this._mode !== ListMode.Delete);
-
-		this.actionable = desktop && isActionable;
+		this.actionable = (this.type === ListItemType.Active) && (this._mode !== ListMode.Delete);
 	}
 
 	onEnterDOM() {
 		document.addEventListener("mouseup", this.deactivate);
+		document.addEventListener("touchend", this.deactivate);
 		document.addEventListener("keyup", this.deactivateByKey);
 	}
 
 	onExitDOM() {
 		document.removeEventListener("mouseup", this.deactivate);
 		document.removeEventListener("keyup", this.deactivateByKey);
+		document.removeEventListener("touchend", this.deactivate);
 	}
 
 	_onkeydown(event) {
@@ -172,7 +167,16 @@ class ListItem extends ListItemBase {
 		this.deactivate();
 	}
 
-	_onfocusout(event) {
+	_ontouchstart(event) {
+		this._onmousedown(event);
+	}
+
+	_ontouchend(event) {
+		this._onmouseup(event);
+	}
+
+	_onfocusout() {
+		super._onfocusout();
 		this.deactivate();
 	}
 
@@ -188,10 +192,18 @@ class ListItem extends ListItemBase {
 	 * and Multi (ui5-checkbox) selection modes are used.
 	 */
 	onMultiSelectionComponentPress(event) {
+		if (this.isInactive) {
+			return;
+		}
+
 		this.fireEvent("_selectionRequested", { item: this, selected: event.target.checked, selectionComponentPressed: true });
 	}
 
 	onSingleSelectionComponentPress(event) {
+		if (this.isInactive) {
+			return;
+		}
+
 		this.fireEvent("_selectionRequested", { item: this, selected: !event.target.selected, selectionComponentPressed: true });
 	}
 
@@ -205,8 +217,20 @@ class ListItem extends ListItemBase {
 		this.fireEvent("_selectionRequested", { item: this, selectionComponentPressed: false });
 	}
 
+	onDetailClick(event) {
+		this.fireEvent("detailClick", { item: this, selected: this.selected });
+	}
+
 	fireItemPress(event) {
+		if (this.isInactive) {
+			return;
+		}
+
 		this.fireEvent("_press", { item: this, selected: this.selected, key: event.key });
+	}
+
+	get isInactive() {
+		return this.type === ListItemType.Inactive || this.type === ListItemType.Detail;
 	}
 
 	get placeSelectionElementBefore() {
@@ -233,6 +257,10 @@ class ListItem extends ListItemBase {
 
 	get modeDelete() {
 		return this._mode === ListMode.Delete;
+	}
+
+	get typeDetail() {
+		return this.type === ListItemType.Detail;
 	}
 }
 

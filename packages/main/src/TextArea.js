@@ -3,7 +3,7 @@ import litRender from "@ui5/webcomponents-base/dist/renderer/LitRenderer.js";
 import Integer from "@ui5/webcomponents-base/dist/types/Integer.js";
 import { fetchI18nBundle, getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import { getFeature } from "@ui5/webcomponents-base/dist/FeaturesRegistry.js";
-import { isIE } from "@ui5/webcomponents-core/dist/sap/ui/Device.js";
+import { isIE } from "@ui5/webcomponents-base/dist/Device.js";
 import TextAreaTemplate from "./generated/templates/TextAreaTemplate.lit.js";
 
 import { TEXTAREA_CHARACTERS_LEFT, TEXTAREA_CHARACTERS_EXCEEDED } from "./generated/i18n/i18n-defaults.js";
@@ -42,9 +42,9 @@ const metadata = {
 		},
 
 		/**
-		 * Defines whether the <code>ui5-textarea</code> is readonly.
+		 * Defines whether the <code>ui5-textarea</code> is read-only.
 		 * <br><br>
-		 * <b>Note:</b> A readonly <code>ui5-textarea</code> is not editable,
+		 * <b>Note:</b> A read-only <code>ui5-textarea</code> is not editable,
 		 * but still provides visual feedback upon user interaction.
 		 *
 		 * @type {boolean}
@@ -101,9 +101,10 @@ const metadata = {
 		 * Defines the maximum number of characters that the <code>value</code> can have.
 		 *
 		 * @type {number}
+		 * @defaultValue null
 		 * @public
 		 */
-		maxLength: {
+		maxlength: {
 			type: Integer,
 			defaultValue: null,
 		},
@@ -113,8 +114,8 @@ const metadata = {
 		 * in the <code>ui5-textarea</code>.
 		 * <br><br>
 		 * If set to <code>false</code>, the user is not allowed to enter more characters than what is set in the
-		 * <code>maxLength</code> property.
-		 * If set to <code>true</code> the characters exceeding the <code>maxLength</code> value are selected on
+		 * <code>maxlength</code> property.
+		 * If set to <code>true</code> the characters exceeding the <code>maxlength</code> value are selected on
 		 * paste and the counter below the <code>ui5-textarea</code> displays their number.
 		 *
 		 * @type {boolean}
@@ -152,15 +153,17 @@ const metadata = {
 		/**
 		 * Determines the name with which the <code>ui5-textarea</code> will be submitted in an HTML form.
 		 *
+		 * <br><br>
 		 * <b>Important:</b> For the <code>name</code> property to have effect, you must add the following import to your project:
 		 * <code>import "@ui5/webcomponents/dist/features/InputElementsFormSupport.js";</code>
 		 *
+		 * <br><br>
 		 * <b>Note:</b> When set, a native <code>input</code> HTML element
 		 * will be created inside the <code>ui5-textarea</code> so that it can be submitted as
 		 * part of an HTML form. Do not use this property unless you need to submit a form.
 		 *
 		 * @type {string}
-		 * @defaultvalue: ""
+		 * @defaultvalue ""
 		 * @public
 		 */
 		name: {
@@ -353,7 +356,7 @@ class TextArea extends UI5Element {
 			leftCharactersCount;
 
 		if (this.showExceededText) {
-			const maxLength = this.maxLength || 0;
+			const maxLength = this.maxlength || 0;
 
 			if (maxLength) {
 				leftCharactersCount = maxLength - this.value.length;
@@ -365,7 +368,7 @@ class TextArea extends UI5Element {
 				}
 			}
 		} else {
-			calcedMaxLength = this.maxLength;
+			calcedMaxLength = this.maxlength;
 		}
 
 		return {
@@ -403,10 +406,8 @@ class TextArea extends UI5Element {
 		return this.valueState === "Error" ? "true" : undefined;
 	}
 
-	static async define(...params) {
+	static async onDefine() {
 		await fetchI18nBundle("@ui5/webcomponents");
-
-		super.define(...params);
 	}
 }
 

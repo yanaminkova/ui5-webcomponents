@@ -1,16 +1,14 @@
 import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
 import litRender from "@ui5/webcomponents-base/dist/renderer/LitRenderer.js";
-import LocaleData from "@ui5/webcomponents-core/dist/sap/ui/core/LocaleData.js";
+import LocaleData from "@ui5/webcomponents-localization/dist/LocaleData.js";
+import DateFormat from "@ui5/webcomponents-localization/dist/DateFormat.js";
 import { getCalendarType } from "@ui5/webcomponents-base/dist/config/CalendarType.js";
-import { getFormatLocale } from "@ui5/webcomponents-base/dist/FormatSettings.js";
-import { isEnter, isSpace } from "@ui5/webcomponents-base/dist/events/PseudoEvents.js";
+import { isEnter, isSpace } from "@ui5/webcomponents-base/dist/Keys.js";
 import ItemNavigation from "@ui5/webcomponents-base/dist/delegate/ItemNavigation.js";
-import { getLocale } from "@ui5/webcomponents-base/dist/LocaleProvider.js";
+import getLocale from "@ui5/webcomponents-base/dist/locale/getLocale.js";
 import Integer from "@ui5/webcomponents-base/dist/types/Integer.js";
-import getShadowDOMTarget from "@ui5/webcomponents-base/dist/events/getShadowDOMTarget.js";
-import DateFormat from "@ui5/webcomponents-core/dist/sap/ui/core/format/DateFormat.js";
-import CalendarType from "@ui5/webcomponents-base/dist/dates/CalendarType.js";
-import CalendarDate from "@ui5/webcomponents-base/dist/dates/CalendarDate.js";
+import CalendarType from "@ui5/webcomponents-base/dist/types/CalendarType.js";
+import CalendarDate from "@ui5/webcomponents-localization/dist/dates/CalendarDate.js";
 import YearPickerTemplate from "./generated/templates/YearPickerTemplate.lit.js";
 
 // Styles
@@ -30,6 +28,7 @@ const metadata = {
 		timestamp: {
 			type: Integer,
 		},
+
 		/**
 		 * Sets a calendar type used for display.
 		 * If not set, the calendar type of the global configuration is used.
@@ -39,18 +38,56 @@ const metadata = {
 		primaryCalendarType: {
 			type: CalendarType,
 		},
+
+		/**
+		 * Determines the мinimum date available for selection.
+		 *
+		 * @type {String}
+		 * @defaultvalue ""
+		 * @since 1.0.0-rc.6
+		 * @public
+		 */
+		minDate: {
+			type: String,
+		},
+
+		/**
+		 * Determines the maximum date available for selection.
+		 *
+		 * @type {String}
+		 * @defaultvalue undefined
+		 * @since 1.0.0-rc.6
+		 * @public
+		 */
+		maxDate: {
+			type: String,
+			defaultValue: undefined,
+		},
+
 		_selectedYear: {
 			type: Integer,
 			noAttribute: true,
 		},
+
 		_yearIntervals: {
 			type: Object,
 			multiple: true,
 		},
+
 		_hidden: {
 			type: Boolean,
 			noAttribute: true,
 		},
+		/**
+		* Determines the format, displayed in the input field.
+		*
+		* @type {string}
+		* @defaultvalue ""
+		* @public
+		*/
+	   formatPattern: {
+		   type: String,
+	   },
 	},
 	events: /** @lends  sap.ui.webcomponents.main.YearPicker.prototype */ {
 		/**
@@ -60,7 +97,6 @@ const metadata = {
 		 */
 		selectedYearChange: {},
 	},
-	_eventHandlersByConvention: true,
 };
 
 /**
@@ -95,11 +131,18 @@ class YearPicker extends UI5Element {
 	constructor() {
 		super();
 
-		this._oLocale = getFormatLocale();
+		this._oLocale = getLocale();
 
 		this._itemNav = new ItemNavigation(this, { rowSize: 4 });
 		this._itemNav.getItemsCallback = function getItemsCallback() {
-			return [].concat(...this._yearIntervals);
+			const focusableYears = [];
+
+			for (let i = 0; i < this._yearIntervals.length; i++) {
+				const yearInterval = this._yearIntervals[i].filter(x => !x.disabled);
+				focusableYears.push(yearInterval);
+			}
+
+			return [].concat(...focusableYears);
 		}.bind(this);
 
 		this._itemNav.attachEvent(
@@ -142,13 +185,18 @@ class YearPicker extends UI5Element {
 
 			const year = {
 				timestamp: timestamp.toString(),
-				id: `${this._state._id}-y${timestamp}`,
+				id: `${this._id}-y${timestamp}`,
 				year: oYearFormat.format(oCalDate.toLocalJSDate()),
 				classes: "ui5-yp-item",
 			};
 
 			if (oCalDate.getYear() === this._selectedYear) {
 				year.classes += " ui5-yp-item--selected";
+			}
+
+			if ((this.minDate || this.maxDate) && this._isOutOfSelectableRange(oCalDate.getYear())) {
+				year.classes += " ui5-yp-item--disabled";
+				year.disabled = true;
 			}
 
 			if (intervals[intervalIndex]) {
@@ -183,10 +231,13 @@ class YearPicker extends UI5Element {
 		return this.primaryCalendarType || getCalendarType() || LocaleData.getInstance(getLocale()).getPreferredCalendarType();
 	}
 
-	onclick(event) {
-		const eventTarget = getShadowDOMTarget(event);
-		if (eventTarget.className.indexOf("ui5-yp-item") > -1) {
-			const timestamp = this.getTimestampFromDom(eventTarget);
+	get _isPattern() {
+		return this._formatPattern !== "medium" && this._formatPattern !== "short" && this._formatPattern !== "long";
+	}
+
+	_onclick(event) {
+		if (event.target.className.indexOf("ui5-yp-item") > -1) {
+			const timestamp = this.getTimestampFromDom(event.target);
 			this.timestamp = timestamp;
 			this._selectedYear = this._year;
 			this._itemNav.current = YearPicker._MIDDLE_ITEM_INDEX;
@@ -199,7 +250,7 @@ class YearPicker extends UI5Element {
 		return parseInt(sTimestamp);
 	}
 
-	onkeydown(event) {
+	_onkeydown(event) {
 		if (isEnter(event)) {
 			return this._handleEnter(event);
 		}
@@ -210,10 +261,9 @@ class YearPicker extends UI5Element {
 	}
 
 	_handleEnter(event) {
-		const eventTarget = getShadowDOMTarget(event);
 		event.preventDefault();
-		if (eventTarget.className.indexOf("ui5-yp-item") > -1) {
-			const timestamp = this.getTimestampFromDom(eventTarget);
+		if (event.target.className.indexOf("ui5-yp-item") > -1) {
+			const timestamp = this.getTimestampFromDom(event.target);
 
 			this.timestamp = timestamp;
 			this._selectedYear = this._year;
@@ -223,10 +273,9 @@ class YearPicker extends UI5Element {
 	}
 
 	_handleSpace(event) {
-		const eventTarget = getShadowDOMTarget(event);
 		event.preventDefault();
-		if (eventTarget.className.indexOf("ui5-yp-item") > -1) {
-			const timestamp = this.getTimestampFromDom(eventTarget);
+		if (event.target.className.indexOf("ui5-yp-item") > -1) {
+			const timestamp = this.getTimestampFromDom(event.target);
 
 			this._selectedYear = CalendarDate.fromTimestamp(
 				timestamp * 1000,
@@ -253,7 +302,63 @@ class YearPicker extends UI5Element {
 			return;
 		}
 
+		if (this._isOutOfSelectableRange(oCalDate.getYear() - YearPicker._MIDDLE_ITEM_INDEX)
+		&& this._isOutOfSelectableRange(oCalDate.getYear() + YearPicker._MIDDLE_ITEM_INDEX)) {
+			return;
+		}
+
+		if (this._isOutOfSelectableRange(oCalDate.getYear() - YearPicker._MIDDLE_ITEM_INDEX)
+		&& this._isOutOfSelectableRange(oCalDate.getYear() + YearPicker._MIDDLE_ITEM_INDEX)) {
+			return;
+		}
+
 		this.timestamp = oCalDate.valueOf() / 1000;
+	}
+
+	get _formatPattern() {
+		return this.formatPattern || "medium"; // get from config
+	}
+
+	_isOutOfSelectableRange(year) {
+		const minDate = new Date(this._minDate),
+			maxDate = new Date(this._maxDate),
+			minDateCheck = minDate && year < minDate.getFullYear(),
+			maxDateCheck = maxDate && year > maxDate.getFullYear();
+
+		return minDateCheck || maxDateCheck;
+	}
+
+	get _maxDate() {
+		if (this.maxDate) {
+			const jsDate = new Date(this.getFormat().parse(this.maxDate).getFullYear(), this.getFormat().parse(this.maxDate).getMonth(), this.getFormat().parse(this.maxDate).getDate());
+			const oCalDate = CalendarDate.fromTimestamp(jsDate.getTime(), this._primaryCalendarType);
+			return oCalDate.valueOf();
+		}
+		return this.maxDate;
+	}
+
+	get _minDate() {
+		if (this.minDate) {
+			const jsDate = new Date(this.getFormat().parse(this.minDate).getFullYear(), this.getFormat().parse(this.minDate).getMonth(), this.getFormat().parse(this.minDate).getDate());
+			const oCalDate = CalendarDate.fromTimestamp(jsDate.getTime(), this._primaryCalendarType);
+			return oCalDate.valueOf();
+		}
+		return this.minDate;
+	}
+
+	getFormat() {
+		if (this._isPattern) {
+			this._oDateFormat = DateFormat.getInstance({
+				pattern: this._formatPattern,
+				calendarType: this._primaryCalendarType,
+			});
+		} else {
+			this._oDateFormat = DateFormat.getInstance({
+				style: this._formatPattern,
+				calendarType: this._primaryCalendarType,
+			});
+		}
+		return this._oDateFormat;
 	}
 
 	get styles() {
