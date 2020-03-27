@@ -54,12 +54,4 @@ To get the ShellBar's coPilot animated SVG you have to import the following modu
 
 * **ui5-shellbar-item:** "src" property renamed to "name":
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 The src property was renamed to icon and accepts icon name (such as "add") instead of icon src (such as "sap-icon://add")
-=======
-The src property was renamed to icon and accepts icon name (such as "add") instead of icon src (such as "sap-icon://add")
->>>>>>> master
-=======
-The src property was renamed to icon and accepts icon name (such as "add") instead of icon src (such as "sap-icon://add")
->>>>>>> b012d84a899fd3099bdd271a3586eceb3c750294
