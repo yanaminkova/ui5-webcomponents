@@ -7,11 +7,25 @@
 
 	<script src="../../webcomponentsjs/webcomponents-loader.js"></script>
 	<script src="../../resources/bundle.esm.js" type="module"></script>
-
 	<script nomodule src="../../resources/bundle.es5.js"></script>
+
 </head>
 
-<body>
+<body style="background-color: var(--sapBackgroundColor);">
+	<ui5-title>List "infinite-scroll"</ui5-title>
+	<ui5-button id="btnTrigger">scroll</ui5-button>
+	<ui5-list id="infiniteScrollEx" style="height: 200px" infinite-scroll>
+		<ui5-li>Laptop Lenovo</ui5-li>
+		<ui5-li>IPhone 3</ui5-li>
+		<ui5-li>HP Monitor 24</ui5-li>
+		<ui5-li>Audio cabel</ui5-li>
+		<ui5-li>DVD set</ui5-li>
+		<ui5-li>HP Monitor 24</ui5-li>
+		<ui5-li>Audio cabel</ui5-li>
+		<ui5-li id="lastItem">Last Item</ui5-li>
+	</ui5-list>
+	<input id="loadMoreResult" value="0"/>
+	<br/>
 	<ui5-list id="listEvents" mode="SingleSelectEnd">
 		<ui5-li id="country1" >Argentina</ui5-li>
 		<ui5-li id="country2" selected >Bulgaria</ui5-li>
@@ -48,6 +62,12 @@
 		<ui5-li>Option #3</ui5-li>
 	</ui5-list>
 
+	<ui5-list id="default-slot-test" mode="SingleSelect">
+		<ui5-li>Option #1</ui5-li>
+		<ui5-li>Option #2</ui5-li>
+		<ui5-li>Option #3</ui5-li>
+	</ui5-list>
+
 	<ui5-input id="fieldMultiSelResult"></ui5-input>
 
 	<ui5-list id="keyboardTestList">
@@ -64,6 +84,40 @@
 		<ui5-li-custom selected>
 				<ui5-radiobutton text="Option C" disabled="disabled"></ui5-radiobutton>
 		</ui5-li-custom>
+	</ui5-list>
+
+	<ui5-list id="no-data-list" header-text="API: noDataText" separators="None" no-data-text="No Data Available"></ui5-list>
+
+	<ui5-list
+		id="header-slot-list"
+		mode="MultiSelect"
+		header-text="Text when no header provided"
+		footer-text="Copyright"
+		no-data-text="No data">
+
+		<div slot="header" class="header">
+			<ui5-title id="header-slot-title">List Title Here</ui5-title>
+		</div>
+
+	</ui5-list>
+
+	<ui5-list id="inactiveMultiSelect" header-text="API: ListItem type='Inactive'" mode="MultiSelect">
+		<ui5-li type="Inactive">Inactive item</ui5-li>
+		<ui5-li type="Inactive">Inactive item</ui5-li>
+	</ui5-list>
+
+	<br/><br/>
+
+	<ui5-list id="inactiveSingleSelect" header-text="API: ListItem type='Inactive'" mode="SingleSelectBegin">
+		<ui5-li type="Inactive">Inactive item</ui5-li>
+		<ui5-li type="Inactive">Inactive item</ui5-li>
+	</ui5-list>
+
+	<br/><br/>
+	<span id="detailPressCounter">0</span>
+	<ui5-list header-text="API: ListItem type='Detail'">
+		<ui5-li id="detailListItem" type="Detail">Detail item</ui5-li>
+		<ui5-li >Normal item</ui5-li>
 	</ui5-list>
 
 	<script>
@@ -96,6 +150,25 @@
 		listMultiSel.addEventListener("ui5-selectionChange", function(event) {
 			fieldMultiSelResult.value = event.detail.selectionComponentPressed;
 		})
+
+		btnTrigger.addEventListener("click", (e) => {
+			const scrollableContiner = infiniteScrollEx.shadowRoot.querySelector(".ui5-list-root");
+			scrollableContiner.scroll(0, scrollableContiner.scrollHeight);
+		});
+		
+		var loadMoreCounter = 0;
+		infiniteScrollEx.addEventListener("ui5-loadMore", (e) => {
+			for(var i = 0; i < 3; i++) {
+				var li = document.createElement("ui5-li");
+				li.textContent = "Title" + i;
+				infiniteScrollEx.appendChild(li);
+			}
+			loadMoreResult.value= ++loadMoreCounter;
+		});
+
+		detailListItem.addEventListener("ui5-detailClick", (e) => {
+			detailPressCounter.innerHTML = parseInt(detailPressCounter.innerHTML) + 1;
+		});
 	</script>
 </body>
 </html>

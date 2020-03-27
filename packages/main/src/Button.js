@@ -1,6 +1,6 @@
 import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
 import litRender from "@ui5/webcomponents-base/dist/renderer/LitRenderer.js";
-import { isSpace, isEnter } from "@ui5/webcomponents-base/dist/events/PseudoEvents.js";
+import { isSpace, isEnter } from "@ui5/webcomponents-base/dist/Keys.js";
 import { getRTL } from "@ui5/webcomponents-base/dist/config/RTL.js";
 import { getFeature } from "@ui5/webcomponents-base/dist/FeaturesRegistry.js";
 import { fetchI18nBundle, getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
@@ -12,6 +12,9 @@ import { BUTTON_ARIA_TYPE_ACCEPT, BUTTON_ARIA_TYPE_REJECT, BUTTON_ARIA_TYPE_EMPH
 
 // Styles
 import buttonCss from "./generated/themes/Button.css.js";
+
+let isGlobalHandlerAttached = false;
+let activeButton = null;
 
 /**
  * @public
@@ -81,7 +84,7 @@ const metadata = {
 		/**
 		 * When set to <code>true</code>, the <code>ui5-button</code> will
 		 * automatically submit the nearest form element upon <code>press</code>.
-		 *
+		 * <br><br>
 		 * <b>Important:</b> For the <code>submits</code> property to have effect, you must add the following import to your project:
 		 * <code>import "@ui5/webcomponents/dist/features/InputElementsFormSupport.js";</code>
 		 *
@@ -136,11 +139,23 @@ const metadata = {
 		_iconSettings: {
 			type: Object,
 		},
+
+		/**
+		 * Defines the tabIndex of the component.
+		 * @private
+		 */
+		_tabIndex: {
+			type: String,
+			defaultValue: "0",
+			noAttribute: true,
+		},
 	},
+	managedSlots: true,
 	slots: /** @lends sap.ui.webcomponents.main.Button.prototype */ {
 		/**
 		 * Defines the text of the <code>ui5-button</code>.
-		 * <br><b>Note:</b> Аlthough this slot accepts HTML Elements, it is strongly recommended that you only use text in order to preserve the intended design.
+		 * <br><br>
+		 * <b>Note:</b> Аlthough this slot accepts HTML Elements, it is strongly recommended that you only use text in order to preserve the intended design.
 		 *
 		 * @type {Node[]}
 		 * @slot
@@ -221,10 +236,16 @@ class Button extends UI5Element {
 		super();
 
 		this._deactivate = () => {
-			if (this.active) {
-				this.active = false;
+			if (activeButton) {
+				activeButton.active = false;
 			}
 		};
+
+		if (!isGlobalHandlerAttached) {
+			document.addEventListener("mouseup", this._deactivate);
+
+			isGlobalHandlerAttached = true;
+		}
 
 		this.i18nBundle = getI18nBundle("@ui5/webcomponents");
 	}
@@ -239,14 +260,6 @@ class Button extends UI5Element {
 		this.hasIcon = !!this.icon;
 	}
 
-	onEnterDOM() {
-		document.addEventListener("mouseup", this._deactivate);
-	}
-
-	onExitDOM() {
-		document.removeEventListener("mouseup", this._deactivate);
-	}
-
 	_onclick(event) {
 		event.isMarked = "button";
 		const FormSupport = getFeature("FormSupport");
@@ -258,6 +271,7 @@ class Button extends UI5Element {
 	_onmousedown(event) {
 		event.isMarked = "button";
 		this.active = true;
+		activeButton = this; // eslint-disable-line
 	}
 
 	_onmouseup(event) {
@@ -314,16 +328,20 @@ class Button extends UI5Element {
 	}
 
 	get tabIndexValue() {
-		return this.nonFocusable ? "-1" : "0";
+		const tabindex = this.getAttribute("tabindex");
+
+		if (tabindex) {
+			return tabindex;
+		}
+
+		return this.nonFocusable ? "-1" : this._tabIndex;
 	}
 
-	static async define(...params) {
+	static async onDefine() {
 		await Promise.all([
 			Icon.define(),
 			fetchI18nBundle("@ui5/webcomponents"),
 		]);
-
-		super.define(...params);
 	}
 }
 

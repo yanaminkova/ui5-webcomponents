@@ -7,35 +7,45 @@ import {
 	isEnter,
 	isEscape,
 	isShow,
-} from "@ui5/webcomponents-base/dist/events/PseudoEvents.js";
+} from "@ui5/webcomponents-base/dist/Keys.js";
 import { getFeature } from "@ui5/webcomponents-base/dist/FeaturesRegistry.js";
 import { getRTL } from "@ui5/webcomponents-base/dist/config/RTL.js";
 import ValueState from "@ui5/webcomponents-base/dist/types/ValueState.js";
 import "@ui5/webcomponents-icons/dist/icons/slim-arrow-down.js";
+import { getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
+import "@ui5/webcomponents-icons/dist/icons/decline.js";
+import {
+	INPUT_SUGGESTIONS_TITLE,
+} from "./generated/i18n/i18n-defaults.js";
 import Label from "./Label.js";
-import Popover from "./Popover.js";
+import ResponsivePopover from "./ResponsivePopover.js";
 import List from "./List.js";
 import StandardListItem from "./StandardListItem.js";
 import Icon from "./Icon.js";
 
-// Template
+// Templates
 import SelectTemplate from "./generated/templates/SelectTemplate.lit.js";
+import SelectPopoverTemplate from "./generated/templates/SelectPopoverTemplate.lit.js";
 
 // Styles
 import selectCss from "./generated/themes/Select.css.js";
+import ResponsivePopoverCommonCss from "./generated/themes/ResponsivePopoverCommon.css.js";
 
 /**
  * @public
  */
 const metadata = {
 	tag: "ui5-select",
+	managedSlots: true,
 	slots: /** @lends sap.ui.webcomponents.main.Select.prototype */ {
 
 		/**
 		 * Defines the <code>ui5-select</code> options.
+		 *
 		 * <br><br>
 		 * <b>Note:</b> Only one selected option is allowed.
 		 * If more than one option is defined as selected, the last one would be considered as the selected one.
+		 *
 		 * <br><br>
 		 * <b>Note:</b> Use the <code>ui5-option</code> component to define the desired options.
 		 * @type {HTMLElement[]}
@@ -67,9 +77,11 @@ const metadata = {
 		 * Determines the name with which the <code>ui5-select</code> will be submitted in an HTML form.
 		 * The value of the <code>ui5-select</code> will be the value of the currently selected <code>ui5-option</code>.
 		 *
+		 * <br><br>
 		 * <b>Important:</b> For the <code>name</code> property to have effect, you must add the following import to your project:
 		 * <code>import "@ui5/webcomponents/dist/features/InputElementsFormSupport.js";</code>
 		 *
+		 * <br><br>
 		 * <b>Note:</b> When set, a native <code>input</code> HTML element
 		 * will be created inside the <code>ui5-select</code> so that it can be submitted as
 		 * part of an HTML form. Do not use this property unless you need to submit a form.
@@ -83,8 +95,16 @@ const metadata = {
 		},
 
 		/**
-		 * Defines the value state of <code>ui5-select</code>.
-		 * Available options are: <code>None</code>, <code>Success</code>, <code>Warning</code> and <code>Error</code>.
+		 * Defines the value state of the <code>ui5-select</code>.
+		 * <br><br>
+		 * Available options are:
+		 * <ul>
+		 * <li><code>None</code></li>
+		 * <li><code>Error</code></li>
+		 * <li><code>Warning</code></li>
+		 * <li><code>Success</code></li>
+		 * <li><code>Information</code></li>
+		 * </ul>
 		 *
 		 * @type {string}
 		 * @defaultvalue "None"
@@ -121,10 +141,10 @@ const metadata = {
 	},
 	events: /** @lends sap.ui.webcomponents.main.Select.prototype */ {
 		/**
-		 * Fired when the selected item changes.
+		 * Fired when the selected option changes.
 		 *
 		 * @event
-		 * @param {HTMLElement} item the selected item.
+		 * @param {HTMLElement} selectedOption the selected option.
 		 * @public
 		 */
 		change: {
@@ -138,6 +158,7 @@ const metadata = {
 /**
  * @class
  *
+ * <h3 class="comment-api-title">Overview</h3>
  * The <code>ui5-select</code> component is used to create a drop-down list.
  * The items inside the <code>ui5-select</code> define the available options by using the <code>ui5-option</code> component.
  *
@@ -174,8 +195,16 @@ class Select extends UI5Element {
 		return SelectTemplate;
 	}
 
+	static get staticAreaTemplate() {
+		return SelectPopoverTemplate;
+	}
+
 	static get styles() {
 		return selectCss;
+	}
+
+	static get staticAreaStyles() {
+		return ResponsivePopoverCommonCss;
 	}
 
 	constructor() {
@@ -186,6 +215,7 @@ class Select extends UI5Element {
 		this._selectedIndexBeforeOpen = -1;
 		this._escapePressed = false;
 		this._lastSelectedOption = null;
+		this.i18nBundle = getI18nBundle("@ui5/webcomponents");
 	}
 
 	onBeforeRendering() {
@@ -202,13 +232,17 @@ class Select extends UI5Element {
 	}
 
 	get _isPickerOpen() {
-		const popover = this.shadowRoot.querySelector("#ui5-select--popover");
+		return this.responsivePopover && this.responsivePopover.opened;
+	}
 
-		return popover && popover.opened;
+	async _respPopover() {
+		this._iconPressed = true;
+		const staticAreaItem = await this.getStaticAreaItemDomRef();
+		return staticAreaItem.querySelector("ui5-responsive-popover");
 	}
 
 	/**
-	 * Currently selected option
+	 * Currently selected option.
 	 * @readonly
 	 * @type { ui5-option }
 	 * @public
@@ -217,17 +251,18 @@ class Select extends UI5Element {
 		return this.options.find(option => option.selected);
 	}
 
-	_togglePopover() {
-		const popover = this.shadowRoot.querySelector("#ui5-select--popover");
-
+	async _toggleRespPopover() {
+		this.responsivePopover = await this._respPopover();
 		if (this.disabled) {
 			return;
 		}
 
+		this.updateStaticAreaItemContentDensity();
+
 		if (this._isPickerOpen) {
-			popover.close();
+			this.responsivePopover.close();
 		} else {
-			popover.openBy(this);
+			this.responsivePopover.open(this);
 		}
 	}
 
@@ -283,7 +318,7 @@ class Select extends UI5Element {
 
 	_onkeydown(event) {
 		if (isShow(event)) {
-			this._togglePopover();
+			this._toggleRespPopover();
 		}
 
 		if (!this._isPickerOpen) {
@@ -293,7 +328,7 @@ class Select extends UI5Element {
 
 	_onkeyup(event) {
 		if (isSpace(event) && !this._isPickerOpen) {
-			this._togglePopover();
+			this._toggleRespPopover();
 		}
 	}
 
@@ -311,17 +346,15 @@ class Select extends UI5Element {
 		const selectedItemIndex = this._getSelectedItemIndex(event.detail.item);
 
 		this._select(selectedItemIndex);
-		this._togglePopover();
+		this._toggleRespPopover();
 	}
 
 	_applyFocusAfterOpen() {
-		this._toggleIcon();
-
 		if (!this._currentlySelectedOption) {
 			return;
 		}
 
-		const li = this.shadowRoot.querySelector(`#${this._currentlySelectedOption._id}-li`);
+		const li = this.responsivePopover.querySelector(`#${this._currentlySelectedOption._id}-li`);
 
 		li.parentElement._itemNavigation.currentIndex = this._selectedIndex;
 		li && li.focus();
@@ -363,11 +396,11 @@ class Select extends UI5Element {
 	}
 
 	_getNextOptionIndex() {
-		return this._selectedIndex === (this.options.length - 1) ? 0 : (this._selectedIndex + 1);
+		return this._selectedIndex === (this.options.length - 1) ? this._selectedIndex : (this._selectedIndex + 1);
 	}
 
 	_getPreviousOptionIndex() {
-		return this._selectedIndex === 0 ? (this.options.length - 1) : (this._selectedIndex - 1);
+		return this._selectedIndex === 0 ? this._selectedIndex : (this._selectedIndex - 1);
 	}
 
 	_beforeOpen() {
@@ -376,7 +409,7 @@ class Select extends UI5Element {
 	}
 
 	_afterClose() {
-		this._toggleIcon();
+		this._iconPressed = false;
 
 		if (this._escapePressed) {
 			this._select(this._selectedIndexBeforeOpen);
@@ -387,8 +420,8 @@ class Select extends UI5Element {
 		}
 	}
 
-	_toggleIcon() {
-		this._iconPressed = !this._iconPressed;
+	get _headerTitleText() {
+		return this.i18nBundle.getText(INPUT_SUGGESTIONS_TITLE);
 	}
 
 	get _currentSelectedItem() {
@@ -407,16 +440,14 @@ class Select extends UI5Element {
 		return getRTL() ? "rtl" : "ltr";
 	}
 
-	static async define(...params) {
+	static async onDefine() {
 		await Promise.all([
 			Label.define(),
-			Popover.define(),
+			ResponsivePopover.define(),
 			List.define(),
 			StandardListItem.define(),
 			Icon.define(),
 		]);
-
-		super.define(...params);
 	}
 }
 

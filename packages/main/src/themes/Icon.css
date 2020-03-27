@@ -2,10 +2,18 @@
 	display: inline-block;
 }
 
+:host([invalid]) {
+	display:none;
+}
+
+:host(:not([hidden]).ui5_hovered) {
+	opacity: .7;
+}
+
 :host {
 	width: 1rem;
 	height: 1rem;
-	color: var(--sapUiContentNonInteractiveIconColor);
+	color: var(--sapContent_NonInteractiveIconColor);
 	fill: currentColor;
 	outline: none;
 }

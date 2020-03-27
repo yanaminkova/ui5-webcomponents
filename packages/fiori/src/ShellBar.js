@@ -5,7 +5,7 @@ import ItemNavigation from "@ui5/webcomponents-base/dist/delegate/ItemNavigation
 import { getFeature } from "@ui5/webcomponents-base/dist/FeaturesRegistry.js";
 import AnimationMode from "@ui5/webcomponents-base/dist/types/AnimationMode.js";
 import { getAnimationMode } from "@ui5/webcomponents-base/dist/config/AnimationMode.js";
-import { isSpace, isEscape } from "@ui5/webcomponents-base/dist/events/PseudoEvents.js";
+import { isSpace } from "@ui5/webcomponents-base/dist/Keys.js";
 import { getRTL } from "@ui5/webcomponents-base/dist/config/RTL.js";
 import StandardListItem from "@ui5/webcomponents/dist/StandardListItem.js";
 import List from "@ui5/webcomponents/dist/List.js";
@@ -16,8 +16,9 @@ import "@ui5/webcomponents-icons/dist/icons/bell.js";
 import "@ui5/webcomponents-icons/dist/icons/overflow.js";
 import "@ui5/webcomponents-icons/dist/icons/grid.js";
 
-// Template
+// Templates
 import ShellBarTemplate from "./generated/templates/ShellBarTemplate.lit.js";
+import ShellBarPopoverTemplate from "./generated/templates/ShellBarPopoverTemplate.lit.js";
 
 // Styles
 import styles from "./generated/themes/ShellBar.css.js";
@@ -32,6 +33,7 @@ const metadata = {
 		/**
 		 * Defines the <code>logo</code> source URI.
 		 * @type {string}
+		 * @defaultvalue ""
 		 * @public
 		 */
 		logo: {
@@ -43,7 +45,7 @@ const metadata = {
 		 * <br><br>
 		 * <b>Note:</b> The <code>primaryTitle</code> would be hidden on S screen size (less than approx. 700px).
 		 * @type {string}
-		 * @defaultvalue: ""
+		 * @defaultvalue ""
 		 * @public
 		 */
 		primaryTitle: {
@@ -55,7 +57,7 @@ const metadata = {
 		 * <br><br>
 		 * <b>Note:</b> The <code>secondaryTitle</code> would be hidden on S and M screen sizes (less than approx. 1300px).
 		 * @type {string}
-		 * @defaultvalue: ""
+		 * @defaultvalue ""
 		 * @public
 		 */
 		secondaryTitle: {
@@ -66,7 +68,7 @@ const metadata = {
 		 * Defines the <code>notificationCount</code>,
 		 * displayed in the notification icon top-right corner.
 		 * @type {string}
-		 * @defaultvalue: ""
+		 * @defaultvalue ""
 		 * @public
 		 */
 		notificationCount: {
@@ -74,18 +76,9 @@ const metadata = {
 		},
 
 		/**
-		 * Defines the source URI of the profile action.
-		 * If no source is set - profile will be excluded from actions.
-		 * @type {string}
-		 * @public
-		 */
-		profile: {
-			type: String,
-		},
-
-		/**
 		 * Defines, if the notification icon would be displayed.
 		 * @type {boolean}
+		 * @defaultvalue false
 		 * @public
 		 */
 		showNotifications: {
@@ -124,7 +117,7 @@ const metadata = {
 		/**
 		 * @private
 		 */
-		showBlockLayer: {
+		showSearchField: {
 			type: Boolean,
 		},
 
@@ -143,8 +136,13 @@ const metadata = {
 		_header: {
 			type: Object,
 		},
-	},
 
+		_menuPopoverItems: {
+			type: Array,
+			defaultValue: [],
+		},
+	},
+	managedSlots: true,
 	slots: /** @lends sap.ui.webcomponents.fiori.ShellBar.prototype */ {
 		/**
 		 * Defines the <code>ui5-shellbar</code> aditional items.
@@ -158,6 +156,18 @@ const metadata = {
 		 */
 		"default": {
 			propertyName: "items",
+			type: HTMLElement,
+		},
+
+		/**
+		 * You can pass <code>ui5-avatar</code> to set the profile image/icon.
+		 * If no profile slot is set - profile will be excluded from actions.
+		 * @type {HTMLElement}
+		 * @slot
+		 * @since 1.0.0-rc.6
+		 * @public
+		 */
+		profile: {
 			type: HTMLElement,
 		},
 
@@ -217,7 +227,7 @@ const metadata = {
 		},
 
 		/**
-		 * Fired, when the profile icon is activated.
+		 * Fired, when the profile slot is present.
 		 *
 		 * @event
 		 * @param {HTMLElement} targetRef dom ref of the activated element
@@ -231,6 +241,7 @@ const metadata = {
 
 		/**
 		 * Fired, when the product switch icon is activated.
+		 * <b>Note:</b> You can prevent closing of oveflow popover by calling <code>event.preventDefault()</code>.
 		 *
 		 * @event
 		 * @param {HTMLElement} targetRef dom ref of the activated element
@@ -272,6 +283,7 @@ const metadata = {
 
 		/**
 		 * Fired, when a menu item is activated
+		 * <b>Note:</b> You can prevent closing of oveflow popover by calling <code>event.preventDefault()</code>.
 		 *
 		 * @event
 		 * @param {HTMLElement} item dom ref of the activated list item
@@ -284,7 +296,6 @@ const metadata = {
 			},
 		},
 	},
-	_eventHandlersByConvention: true,
 };
 
 /**
@@ -292,7 +303,7 @@ const metadata = {
  * <h3 class="comment-api-title">Overview</h3>
  *
  * The <code>ui5-shellbar</code> is meant to serve as an application header
- * and includes numerous built-in features, such as: logo, profile icon, title, search field, notifications and so on.
+ * and includes numerous built-in features, such as: logo, profile image/icon, title, search field, notifications and so on.
  * <br><br>
  * <h3>ES6 Module Import</h3>
  * <code>import "@ui5/webcomponents-fiori/dist/ShellBar";</code>
@@ -321,6 +332,10 @@ class ShellBar extends UI5Element {
 
 	static get template() {
 		return ShellBarTemplate;
+	}
+
+	static get staticAreaTemplate() {
+		return ShellBarPopoverTemplate;
 	}
 
 	static get FIORI_3_BREAKPOINTS() {
@@ -357,10 +372,8 @@ class ShellBar extends UI5Element {
 
 		this._actionList = {
 			itemPress: event => {
-				const popover = this.shadowRoot.querySelector(".ui5-shellbar-overflow-popover");
-
 				if (!this._defaultItemPressPrevented) {
-					popover.close();
+					this.overflowPopover.close();
 				}
 
 				this._defaultItemPressPrevented = false;
@@ -369,10 +382,13 @@ class ShellBar extends UI5Element {
 
 		this._header = {
 			press: event => {
-				const menuPopover = this.shadowRoot.querySelector(".ui5-shellbar-menu-popover");
-
 				if (this.menuItems.length) {
-					menuPopover.openBy(this.shadowRoot.querySelector(".ui5-shellbar-menu-button"));
+					this._menuPopoverItems = [];
+					this.menuItems.forEach(item => {
+						this._menuPopoverItems.push(item.textContent);
+					});
+					this.updateStaticAreaItemContentDensity();
+					this.menuPopover.openBy(this.shadowRoot.querySelector(".ui5-shellbar-menu-button"));
 				}
 			},
 		};
@@ -424,13 +440,11 @@ class ShellBar extends UI5Element {
 
 		this._searchField = {
 			left: 0,
-			focusout: event => {
-				this.showBlockLayer = false;
-			},
 		};
 
-		this._handleResize = event => {
-			this.shadowRoot.querySelector(".ui5-shellbar-overflow-popover").close();
+		this._handleResize = async event => {
+			await this._getResponsivePopover();
+			this.overflowPopover.close();
 			this._overflowActions();
 		};
 	}
@@ -438,7 +452,7 @@ class ShellBar extends UI5Element {
 	_menuItemPress(event) {
 		this.fireEvent("menuItemClick", {
 			item: event.detail.item,
-		});
+		}, true);
 	}
 
 	_logoPress(event) {
@@ -481,10 +495,8 @@ class ShellBar extends UI5Element {
 	 * @public
 	 */
 	closeOverflow() {
-		const popover = this.shadowRoot.querySelector(".ui5-shellbar-overflow-popover");
-
-		if (popover) {
-			popover.close();
+		if (this.overflowPopover) {
+			this.overflowPopover.close();
 		}
 	}
 
@@ -613,30 +625,14 @@ class ShellBar extends UI5Element {
 	}
 
 	_toggleActionPopover() {
-		const popover = this.shadowRoot.querySelector(".ui5-shellbar-overflow-popover");
 		const overflowButton = this.shadowRoot.querySelector(".ui5-shellbar-overflow-button");
-		popover.openBy(overflowButton);
+		this.updateStaticAreaItemContentDensity();
+		this.overflowPopover.openBy(overflowButton);
 	}
 
-	onkeydown(event) {
-		if (isEscape(event)) {
-			return this._handleEscape(event);
-		}
-
+	_onkeydown(event) {
 		if (isSpace(event)) {
 			event.preventDefault();
-		}
-	}
-
-	_handleEscape() {
-		const searchButton = this.shadowRoot.querySelector(".ui5-shellbar-search-button");
-
-		if (this.showBlockLayer) {
-			this.showBlockLayer = false;
-
-			setTimeout(() => {
-				searchButton.focus();
-			}, 0);
 		}
 	}
 
@@ -649,6 +645,12 @@ class ShellBar extends UI5Element {
 	}
 
 	_handleSearchIconPress(event) {
+		this.showSearchField = !this.showSearchField;
+
+		if (!this.showSearchField) {
+			return;
+		}
+
 		const searchField = this.shadowRoot.querySelector(`#${this._id}-searchfield-wrapper`);
 		const triggeredByOverflow = event.target.tagName.toLowerCase() === "ui5-li";
 		const overflowButton = this.shadowRoot.querySelector(".ui5-shellbar-overflow-button");
@@ -665,8 +667,6 @@ class ShellBar extends UI5Element {
 		this._searchField = Object.assign({}, this._searchField, {
 			"right": right,
 		});
-
-		this.showBlockLayer = true;
 
 		setTimeout(() => {
 			const inputSlot = searchField.children[0];
@@ -716,9 +716,11 @@ class ShellBar extends UI5Element {
 	}
 
 	_handleProductSwitchPress(event) {
-		this.fireEvent("productSwitchClick", {
-			targetRef: this.shadowRoot.querySelector(".ui5-shellbar-button-product-switch"),
-		});
+		const buttonRef = this.shadowRoot.querySelector(".ui5-shellbar-button-product-switch");
+
+		this._defaultItemPressPrevented = !this.fireEvent("productSwitchClick", {
+			targetRef: buttonRef.classList.contains("ui5-shellbar-hidden-button") ? event.target : buttonRef,
+		}, true);
 	}
 
 	/**
@@ -744,6 +746,7 @@ class ShellBar extends UI5Element {
 				return {
 					icon: item.icon,
 					id: item._id,
+					count: item.count || undefined,
 					refItemid: item._id,
 					text: item.text,
 					classes: "ui5-shellbar-custom-item ui5-shellbar-button",
@@ -786,7 +789,7 @@ class ShellBar extends UI5Element {
 				priority: 4,
 				subclasses: "ui5-shellbar-image-buttonImage",
 				style: `order: ${this.profile ? 5 : -10};`,
-				subStyles: `${this.profile ? `background-image: url(${this.profile})` : ""}`,
+				profile: true,
 				id: `${this._id}-item-${3}`,
 				domOrder: this.profile ? (++domOrder) : -1,
 				show: this.profile,
@@ -814,6 +817,12 @@ class ShellBar extends UI5Element {
 		if (isDifferent) {
 			this._itemsInfo = newItems;
 		}
+	}
+
+	async _getResponsivePopover() {
+		const staticAreaItem = await this.getStaticAreaItemDomRef();
+		this.overflowPopover = staticAreaItem.querySelector(".ui5-shellbar-overflow-popover");
+		this.menuPopover = staticAreaItem.querySelector(".ui5-shellbar-menu-popover");
 	}
 
 	get classes() {
@@ -854,15 +863,13 @@ class ShellBar extends UI5Element {
 		return getRTL() ? "rtl" : undefined;
 	}
 
-	static async define(...params) {
+	static async onDefine() {
 		await Promise.all([
 			Icon.define(),
 			List.define(),
 			Popover.define(),
 			StandardListItem.define(),
 		]);
-
-		super.define(...params);
 	}
 }
 

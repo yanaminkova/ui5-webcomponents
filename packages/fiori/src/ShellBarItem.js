@@ -13,6 +13,7 @@ const metadata = {
 		/**
 		 * Defines the name of the item's icon.
 		 * @type {string}
+		 * @defaultvalue ""
 		 * @public
 		 */
 		icon: {
@@ -22,10 +23,21 @@ const metadata = {
 		/**
 		 * Defines the item text.
 		 * @type {string}
-		 * @defaultvalue: ""
+		 * @defaultvalue ""
 		 * @public
 		 */
 		text: {
+			type: String,
+		},
+
+		/**
+		 * Defines the count displayed in the top-right corner.
+		 * @type {string}
+		 * @defaultValue ""
+		 * @since 1.0.0-rc.6
+		 * @public
+		 */
+		count: {
 			type: String,
 		},
 	},

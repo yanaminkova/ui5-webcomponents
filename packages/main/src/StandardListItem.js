@@ -96,7 +96,8 @@ const metadata = {
 	slots: /** @lends sap.ui.webcomponents.main.StandardListItem.prototype */ {
 		/**
 		 * Defines the text of the <code>ui5-li</code>.
-		 * <br><b>Note:</b> Аlthough this slot accepts HTML Elements, it is strongly recommended that you only use text in order to preserve the intended design.
+		 * <br><br>
+		 * <b>Note:</b> Аlthough this slot accepts HTML Elements, it is strongly recommended that you only use text in order to preserve the intended design.
 		 *
 		 * @type {Node[]}
 		 * @slot
@@ -157,10 +158,8 @@ class StandardListItem extends ListItem {
 		return (this.icon && this.iconEnd);
 	}
 
-	static async define(...params) {
+	static async onDefine() {
 		await Icon.define();
-
-		super.define(...params);
 	}
 }
 

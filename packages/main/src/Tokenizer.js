@@ -2,6 +2,7 @@ import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
 import litRender from "@ui5/webcomponents-base/dist/renderer/LitRenderer.js";
 import ResizeHandler from "@ui5/webcomponents-base/dist/delegate/ResizeHandler.js";
 import ItemNavigation from "@ui5/webcomponents-base/dist/delegate/ItemNavigation.js";
+import ScrollEnablement from "@ui5/webcomponents-base/dist/delegate/ScrollEnablement.js";
 import { fetchI18nBundle, getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import TokenizerTemplate from "./generated/templates/TokenizerTemplate.lit.js";
 import { MULTIINPUT_SHOW_MORE_TOKENS, TOKENIZER_ARIA_LABEL } from "./generated/i18n/i18n-defaults.js";
@@ -14,6 +15,7 @@ import styles from "./generated/themes/Tokenizer.css.js";
  */
 const metadata = {
 	tag: "ui5-tokenizer",
+	managedSlots: true,
 	slots: /** @lends sap.ui.webcomponents.main.Tokenizer.prototype */ {
 		"default": {
 			propertyName: "tokens",
@@ -94,6 +96,7 @@ class Tokenizer extends UI5Element {
 		this._tokensCount = 0;
 		this._resizeHandler = this._handleResize.bind(this);
 		this._itemNav = new ItemNavigation(this);
+		this._scrollEnablement = new ScrollEnablement(this);
 
 		this._itemNav.getItemsCallback = () => {
 			if (this.disabled) {
@@ -141,6 +144,8 @@ class Tokenizer extends UI5Element {
 			this._invalidate();
 			this._tokensCount = this.tokens.length;
 		}
+
+		this._scrollEnablement.scrollContainer = this.expanded ? this.contentDom : this;
 	}
 
 	_tokenDelete(event) {
@@ -217,10 +222,8 @@ class Tokenizer extends UI5Element {
 		};
 	}
 
-	static async define(...params) {
+	static async onDefine() {
 		await fetchI18nBundle("@ui5/webcomponents");
-
-		super.define(...params);
 	}
 }
 
