@@ -257,9 +257,6 @@ Also, the attribute name is changed from max-length to maxlength.
 * **project:** create "localization" package and deprecate "core" and "utils" packages. The "localization" provides date/time and CLDR functionality
 
 
-# [1.0.0-rc.5](https://github.com/SAP/ui5-webcomponents/compare/v1.0.0-rc.4...v1.0.0-rc.5) (2019-12-02)
-
-##  [Migration guide](https://github.com/SAP/ui5-webcomponents/blob/master/docs/Migration-guides.md) from v1.0.0-rc.4 to v1.0.0-rc.5
 The current release includes several new npm packages, such as `@ui5/webcomponents-fiori` and `@ui5/webcomponents-icons`.
 To make the transition from v1.0.0-rc.4 to v1.0.0-rc.5 smoother, we prepared this [migration guide](https://github.com/SAP/ui5-webcomponents/blob/master/docs/Migration-guides.md).
 
