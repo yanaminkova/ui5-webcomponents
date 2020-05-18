@@ -61,7 +61,7 @@ const metadata = {
 		 * <li><code>Information</code></li>
 		 * </ul>
 		 *
-		 * @type {string}
+		 * @type {ValueState}
 		 * @defaultvalue "None"
 		 * @public
 		 */
@@ -119,7 +119,7 @@ const metadata = {
 		 * <li><code>Persian</code></li>
 		 * </ul>
 		 *
-		 * @type {string}
+		 * @type {CalendarType}
 		 * @defaultvalue "Gregorian"
 		 * @public
 		 */
@@ -303,8 +303,6 @@ class DatePicker extends UI5Element {
 			allowTargetOverlap: true,
 			stayOpenOnScroll: true,
 			afterClose: () => {
-				const calendar = this.responsivePopover.querySelector(`#${this._id}-calendar`);
-
 				this._isPickerOpen = false;
 
 				if (isPhone()) {
@@ -315,13 +313,20 @@ class DatePicker extends UI5Element {
 					this._focusInputAfterClose = false;
 				}
 
-				calendar._hideMonthPicker();
-				calendar._hideYearPicker();
+				const calendar = this.responsivePopover.querySelector(`#${this._id}-calendar`);
+				if (calendar) {
+					calendar._hideMonthPicker();
+					calendar._hideYearPicker();
+				}
 			},
 			afterOpen: () => {
 				const calendar = this.responsivePopover.querySelector(`#${this._id}-calendar`);
-				const dayPicker = calendar.shadowRoot.querySelector(`#${calendar._id}-daypicker`);
 
+				if (!calendar) {
+					return;
+				}
+
+				const dayPicker = calendar.shadowRoot.querySelector(`#${calendar._id}-daypicker`);
 				const selectedDay = dayPicker.shadowRoot.querySelector(".ui5-dp-item--selected");
 				const today = dayPicker.shadowRoot.querySelector(".ui5-dp-item--now");
 				let focusableDay = selectedDay || today;
@@ -346,7 +351,7 @@ class DatePicker extends UI5Element {
 		};
 
 		this._calendar = {
-			onSelectedDatesChange: this._handleCalendarSelectedDatesChange.bind(this),
+			onSelectedDatesChange: this._handleCalendarChange.bind(this),
 			selectedDates: [],
 		};
 
@@ -418,7 +423,8 @@ class DatePicker extends UI5Element {
 
 	_handleInputChange() {
 		let nextValue = this._getInput().getInputValue();
-		const isValid = this.isValid(nextValue);
+		const emptyValue = nextValue === "";
+		const isValid = emptyValue || this.isValid(nextValue);
 		const isInValidRange = this.isInValidRange(this._getTimeStampFromString(nextValue));
 
 		if (isValid && isInValidRange) {
@@ -437,7 +443,8 @@ class DatePicker extends UI5Element {
 
 	_handleInputLiveChange() {
 		const nextValue = this._getInput().getInputValue();
-		const isValid = this.isValid(nextValue) && this.isInValidRange(this._getTimeStampFromString(nextValue));
+		const emptyValue = nextValue === "";
+		const isValid = emptyValue || (this.isValid(nextValue) && this.isInValidRange(this._getTimeStampFromString(nextValue)));
 
 		this.value = nextValue;
 		this.fireEvent("input", { value: nextValue, valid: isValid });
@@ -490,8 +497,12 @@ class DatePicker extends UI5Element {
 
 	// because the parser understands more than one format
 	// but we need values in one format
-	normalizeValue(sValue) {
-		return this.getFormat().format(this.getFormat().parse(sValue));
+	normalizeValue(value) {
+		if (value === "") {
+			return value;
+		}
+
+		return this.getFormat().format(this.getFormat().parse(value));
 	}
 
 	get validValue() {
@@ -532,6 +543,18 @@ class DatePicker extends UI5Element {
 
 	get _headerTitleText() {
 		return this.i18nBundle.getText(INPUT_SUGGESTIONS_TITLE);
+	}
+
+	get phone() {
+		return isPhone();
+	}
+
+	get showHeader() {
+		return this.phone;
+	}
+
+	get showFooter() {
+		return this.phone;
 	}
 
 	getFormat() {
@@ -579,12 +602,24 @@ class DatePicker extends UI5Element {
 		return this.i18nBundle.getText(DATEPICKER_OPEN_ICON_TITLE);
 	}
 
+	get openIconName() {
+		return "appointment-2";
+	}
+
 	get dateAriaDescription() {
 		return this.i18nBundle.getText(DATEPICKER_DATE_ACC_TEXT);
 	}
 
 	get dir() {
 		return getRTL() ? "rtl" : "ltr";
+	}
+
+	/**
+	 * Defines whether the dialog on mobile should have header
+	 * @private
+	 */
+	get _shouldHideHeader() {
+		return false;
 	}
 
 	async _respPopover() {
@@ -596,25 +631,31 @@ class DatePicker extends UI5Element {
 		return !this.disabled && !this.readonly;
 	}
 
-	_handleCalendarSelectedDatesChange(event) {
+	_handleCalendarChange(event) {
 		const iNewValue = event.detail.dates && event.detail.dates[0];
 
 		if (this._calendar.selectedDates.indexOf(iNewValue) !== -1) {
 			this.closePicker();
-			return;
+			return false;
 		}
 
-		this.value = this.getFormat().format(
-			new Date(CalendarDate.fromTimestamp(
-				iNewValue * 1000,
-				this._primaryCalendarType
-			).valueOf()),
-			true
-		);
-		this._calendar.timestamp = iNewValue;
+		const fireChange = this._handleCalendarSelectedDatesChange(event, iNewValue);
+
+		if (fireChange) {
+			this.fireEvent("change", { value: this.value, valid: true });
+			// Angular two way data binding
+			this.fireEvent("value-changed", { value: this.value, valid: true });
+		}
+
+		this.closePicker();
+	}
+
+	_handleCalendarSelectedDatesChange(event, newValue) {
+		this._updateValueCalendarSelectedDatesChange(newValue);
+
+		this._calendar.timestamp = newValue;
 		this._calendar.selectedDates = event.detail.dates;
 		this._focusInputAfterClose = true;
-		this.closePicker();
 
 		if (this.isInValidRange(this._getTimeStampFromString(this.value))) {
 			this.valueState = ValueState.None;
@@ -622,9 +663,17 @@ class DatePicker extends UI5Element {
 			this.valueState = ValueState.Error;
 		}
 
-		this.fireEvent("change", { value: this.value, valid: true });
-		// Angular two way data binding
-		this.fireEvent("value-changed", { value: this.value, valid: true });
+		return true;
+	}
+
+	_updateValueCalendarSelectedDatesChange(newValue) {
+		this.value = this.getFormat().format(
+			new Date(CalendarDate.fromTimestamp(
+				newValue * 1000,
+				this._primaryCalendarType
+			).valueOf()),
+			true
+		);
 	}
 
 	/**

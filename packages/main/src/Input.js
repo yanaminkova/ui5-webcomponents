@@ -1,6 +1,7 @@
 import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
 import litRender from "@ui5/webcomponents-base/dist/renderer/LitRenderer.js";
 import ResizeHandler from "@ui5/webcomponents-base/dist/delegate/ResizeHandler.js";
+import RenderScheduler from "@ui5/webcomponents-base/dist/RenderScheduler.js";
 import { isIE, isPhone } from "@ui5/webcomponents-base/dist/Device.js";
 import ValueState from "@ui5/webcomponents-base/dist/types/ValueState.js";
 import { getFeature } from "@ui5/webcomponents-base/dist/FeaturesRegistry.js";
@@ -71,7 +72,11 @@ const metadata = {
 		 * property is set to <code>true</code>.
 		 * <br><br>
 		 * <b>Note:</b> The &lt;ui5-suggestion-item> is recommended to be used as a suggestion item.
-		 * and you need to import the <code>"@ui5/webcomponents/dist/SuggestionItem"</code> module.
+		 * Importing the Input Suggestions Support feature:
+		 * <br>
+		 * <code>import "@ui5/webcomponents/dist/features/InputSuggestions.js";</code>
+		 * <br>
+		 * also automatically imports the &lt;ui5-suggestion-item> for your convenience.
 		 *
 		 * @type {HTMLElement[]}
 		 * @slot
@@ -93,11 +98,18 @@ const metadata = {
 		},
 
 		/**
-		 * The slot is used in order to display a valueStateMessage.
+		 * Defines the value state message that will be displayed as pop up under the <code>ui5-input</code>.
 		 * <br><br>
-		 * <b>Note:</b> The valueStateMessage would be displayed only if the <code>ui5-input</code> has
-		 * a valueState of type <code>Information</code>, <code>Warning</code> or <code>Error</code>.
+		 *
+		 * <b>Note:</b> If not specified, a default text (in the respective language) will be displayed.
+		 * <br>
+		 * <b>Note:</b> The <code>valueStateMessage</code> would be displayed,
+		 * when the <code>ui5-input</code> is in <code>Information</code>, <code>Warning</code> or <code>Error</code> value state.
+		 * <br>
+		 * <b>Note:</b> If the <code>ui5-input</code> has <code>suggestionItems</code>,
+		 * the <code>valueStateMessage</code> would be displayed as part of the same popover, if used on desktop, or dialog - on phone.
 		 * @type {HTMLElement[]}
+		 * @since 1.0.0-rc.6
 		 * @slot
 		 * @public
 		 */
@@ -170,7 +182,7 @@ const metadata = {
 		 * that use different soft keyboard layouts depending on the given input type.</li>
 		 * </ul>
 		 *
-		 * @type {string}
+		 * @type {InputType}
 		 * @defaultvalue "Text"
 		 * @public
 		 */
@@ -204,7 +216,7 @@ const metadata = {
 		 * <li><code>Information</code></li>
 		 * </ul>
 		 *
-		 * @type {string}
+		 * @type {ValueState}
 		 * @defaultvalue "None"
 		 * @public
 		 */
@@ -277,6 +289,10 @@ const metadata = {
 		},
 
 		_inputWidth: {
+			type: Integer,
+		},
+
+		_listWidth: {
 			type: Integer,
 		},
 
@@ -452,13 +468,17 @@ class Input extends UI5Element {
 			this.updateStaticAreaItemContentDensity();
 			this.Suggestions.toggle(shouldOpenSuggestions);
 
+			RenderScheduler.whenFinished().then(async () => {
+				this._listWidth = await this.Suggestions._getListWidth();
+			});
+
 			if (!isPhone() && shouldOpenSuggestions) {
 				// Set initial focus to the native input
 				this.getInputDOMRef().focus();
 			}
 		}
 
-		if (!this.firstRendering && !this.Suggestions && this.hasValueStateMessage) {
+		if (!this.firstRendering && this.hasValueStateMessage) {
 			this.toggle(this.shouldDisplayOnlyValueStateMessage);
 		}
 
@@ -539,6 +559,7 @@ class Input extends UI5Element {
 		if (isPhone() && !this.readonly && this.Suggestions) {
 			this.updateStaticAreaItemContentDensity();
 			this.Suggestions.open(this);
+			this.isRespPopoverOpen = true;
 		}
 	}
 
@@ -592,7 +613,7 @@ class Input extends UI5Element {
 	}
 
 	toggle(isToggled) {
-		if (isToggled) {
+		if (isToggled && !this.isRespPopoverOpen) {
 			this.openPopover();
 		} else {
 			this.closePopover();
@@ -798,23 +819,24 @@ class Input extends UI5Element {
 	get classes() {
 		return {
 			popoverValueState: {
-				"ui5-input-valuestatemessage-root": true,
-				"ui5-input-valuestatemessage-success": this.valueState === ValueState.Success,
-				"ui5-input-valuestatemessage-error": this.valueState === ValueState.Error,
-				"ui5-input-valuestatemessage-warning": this.valueState === ValueState.Warning,
-				"ui5-input-valuestatemessage-information": this.valueState === ValueState.Information,
+				"ui5-valuestatemessage-root": true,
+				"ui5-valuestatemessage--success": this.valueState === ValueState.Success,
+				"ui5-valuestatemessage--error": this.valueState === ValueState.Error,
+				"ui5-valuestatemessage--warning": this.valueState === ValueState.Warning,
+				"ui5-valuestatemessage--information": this.valueState === ValueState.Information,
 			},
 		};
 	}
 
 	get styles() {
 		return {
-			root: {
-				"min-height": "1rem",
-				"box-shadow": "none",
-			},
-			header: {
+			popoverHeader: {
 				"width": `${this._inputWidth}px`,
+			},
+			suggestionPopoverHeader: {
+				"display": this._listWidth === 0 ? "none" : "inline-block",
+				"width": `${this._listWidth}px`,
+				"padding": "0.5625rem 1rem",
 			},
 		};
 	}
@@ -826,7 +848,7 @@ class Input extends UI5Element {
 	}
 
 	get shouldDisplayOnlyValueStateMessage() {
-		return this.hasValueStateMessage && !this.suggestionItems.length && this.focused;
+		return this.hasValueStateMessage && !this.shouldOpenSuggestions() && this.focused;
 	}
 
 	get shouldDisplayDefaultValueStateMessage() {
@@ -847,6 +869,10 @@ class Input extends UI5Element {
 
 	get suggestionsText() {
 		return this.i18nBundle.getText(INPUT_SUGGESTIONS);
+	}
+
+	get _isPhone() {
+		return isPhone();
 	}
 
 	static async onDefine() {

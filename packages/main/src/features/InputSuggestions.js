@@ -2,6 +2,7 @@ import { registerFeature } from "@ui5/webcomponents-base/dist/FeaturesRegistry.j
 
 import List from "../List.js";
 import ResponsivePopover from "../ResponsivePopover.js";
+import "../SuggestionItem.js";
 
 /**
  * A class to manage the <code>Input</code suggestion items.
@@ -271,6 +272,11 @@ class Suggestions {
 	async _getList() {
 		this.responsivePopover = await this._respPopover();
 		return this.responsivePopover.querySelector("ui5-list");
+	}
+
+	async _getListWidth() {
+		const list = await this._getList();
+		return list.offsetWidth;
 	}
 
 	_getRealItems() {

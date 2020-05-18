@@ -24,6 +24,14 @@ import TimePickerPopoverTemplate from "./generated/templates/TimePickerPopoverTe
 import Input from "./Input.js";
 import WheelSlider from "./WheelSlider.js";
 import {
+	getHours,
+	getMinutes,
+	getSeconds,
+	getHoursConfigByFormat,
+	getTimeControlsByFormat,
+} from "./timepicker-utils/TimeSlider.js";
+
+import {
 	TIMEPICKER_HOURS_LABEL,
 	TIMEPICKER_MINUTES_LABEL,
 	TIMEPICKER_SECONDS_LABEL,
@@ -47,12 +55,12 @@ const metadata = {
 		 * Defines a formatted time value.
 		 *
 		 * @type {string}
-		 * @defaultvalue ""
+		 * @defaultvalue undefined
 		 * @public
 		 */
 		value: {
 			type: String,
-			defaultValue: "",
+			defaultValue: undefined,
 		},
 
 		/**
@@ -100,7 +108,7 @@ const metadata = {
 		 * <li><code>Information</code></li>
 		 * </ul>
 		 *
-		 * @type {string}
+		 * @type {ValueState}
 		 * @defaultvalue "None"
 		 * @public
 		 */
@@ -286,6 +294,10 @@ class TimePicker extends UI5Element {
 			this.formatPattern = LocaleData.getInstance(getLocale()).getTimePattern(this.getFormat().oFormatOptions.style);
 		}
 
+		if (this.value === undefined) {
+			this.value = this.getFormat().format(new Date());
+		}
+
 		this._initHoursFormatParameters();
 	}
 
@@ -361,7 +373,7 @@ class TimePicker extends UI5Element {
 			}
 		}
 		if (this._hoursParameters.isTwelveHoursFormat && periodsSlider && this._hoursParameters.minHour === 1) {
-			periodsSlider.value = currentDate.getHours() > this._hoursParameters.maxHour ? this.periodsArray[1] : this.periodsArray[0];
+			periodsSlider.value = currentDate.getHours() >= this._hoursParameters.maxHour ? this.periodsArray[1] : this.periodsArray[0];
 		} else if (this._hoursParameters.isTwelveHoursFormat && periodsSlider) {
 			periodsSlider.value = (currentDate.getHours() > this._hoursParameters.maxHour || currentDate.getHours() === this._hoursParameters.minHour) ? this.periodsArray[1] : this.periodsArray[0];
 		}
@@ -429,50 +441,16 @@ class TimePicker extends UI5Element {
 		return this.responsivePopover;
 	}
 
-	generateTimeItemsArray(x) {
-		const array = [];
-		for (let i = 0; i < x; i++) {
-			let tempString = i.toString();
-			if (tempString.length === 1) {
-				tempString = `0${tempString}`;
-			}
-
-			array.push(tempString);
-		}
-
-		return array;
-	}
-
 	get secondsArray() {
-		return this.generateTimeItemsArray(60);
+		return getSeconds();
 	}
 
 	get minutesArray() {
-		return this.generateTimeItemsArray(60);
+		return getMinutes();
 	}
 
 	get hoursArray() {
-		let hoursValueArray = [];
-
-		if (this._hoursParameters.isTwelveHoursFormat) {
-			hoursValueArray = this.generateTimeItemsArray(12);
-		} else {
-			hoursValueArray = this.generateTimeItemsArray(24);
-		}
-
-		if (this._hoursParameters.minHour === 1) {
-			for (let i = 0; i < hoursValueArray.length; i++) {
-				const tempValue = hoursValueArray[i] * 1 + 1;
-
-				if (tempValue.toString().length === 1) {
-					hoursValueArray[i] = `0${tempValue.toString()}`;
-				} else {
-					hoursValueArray[i] = tempValue.toString();
-				}
-			}
-		}
-
-		return hoursValueArray;
+		return getHours(this._hoursParameters);
 	}
 
 	get periodsArray() {
@@ -515,16 +493,21 @@ class TimePicker extends UI5Element {
 			minutesSlider = this.minutesSlider,
 			hoursSlider = this.hoursSlider,
 			periodsSlider = this.periodsSlider,
-			hours = hoursSlider ? hoursSlider.getAttribute("value") : this._hoursParameters.minHour.toString(),
 			minutes = minutesSlider ? minutesSlider.getAttribute("value") : "0",
 			seconds = secondsSlider ? secondsSlider.getAttribute("value") : "0",
 			period = periodsSlider ? periodsSlider.getAttribute("value") : this.periodsArray[0];
 
-		if (period === this.periodsArray[1]) {
-			selectedDate.setHours(hours * 1 + 12);
-		} else {
-			selectedDate.setHours(hours);
+		let hours = hoursSlider ? hoursSlider.getAttribute("value") : this._hoursParameters.minHour.toString();
+
+		if (period === this.periodsArray[0]) { // AM
+			hours = hours === "12" ? 0 : hours;
 		}
+
+		if (period === this.periodsArray[1]) { // PM
+			hours = hours === "12" ? hours : hours * 1 + 12;
+		}
+
+		selectedDate.setHours(hours);
 		selectedDate.setMinutes(minutes);
 		selectedDate.setSeconds(seconds);
 
@@ -536,15 +519,26 @@ class TimePicker extends UI5Element {
 	}
 
 	/**
-	 * Opens the picker.
+	 * Checks if a value is valid against the current format patternt of the TimePicker.
+	 *
+	 * <br><br>
+	 * <b>Note:</b> an empty string is considered as valid value.
+	 * @param {string} value The value to be tested against the current date format
 	 * @public
 	 */
-	isValid(value = "") {
+	isValid(value) {
+		if (value === "") {
+			return true;
+		}
 		return !!(value && this.getFormat().parse(value));
 	}
 
-	normalizeValue(sValue) {
-		return this.getFormat().format(this.getFormat().parse(sValue));
+	normalizeValue(value) {
+		if (value === "") {
+			return value;
+		}
+
+		return this.getFormat().format(this.getFormat().parse(value));
 	}
 
 	get _formatPattern() {
@@ -592,7 +586,7 @@ class TimePicker extends UI5Element {
 		}
 	}
 
-	_oncontainerkeydown(e) {
+	async _oncontainerkeydown(e) {
 		if (isLeft(e)) {
 			let expandedSliderIndex = 0;
 			for (let i = 0; i < this._slidersDomRefs.length; i++) {
@@ -621,11 +615,13 @@ class TimePicker extends UI5Element {
 		}
 
 		if (isTabNext(e) && e.target === this._slidersDomRefs[this._slidersDomRefs.length - 1]) {
+			const responsivePopover = await this._getPopover();
 			e.preventDefault();
-			this.getStaticAreaItemDomRef().querySelector(".ui5-timepicker-footer").firstElementChild.focus();
+			responsivePopover.querySelector(".ui5-timepicker-footer").firstElementChild.focus();
 		} else if (isTabPrevious(e) && e.target === this._slidersDomRefs[0]) {
+			const responsivePopover = await this._getPopover();
 			e.preventDefault();
-			this.getStaticAreaItemDomRef().querySelector(`.ui5-timepicker-footer`).lastElementChild.focus();
+			responsivePopover.querySelector(`.ui5-timepicker-footer`).lastElementChild.focus();
 		}
 	}
 
@@ -656,6 +652,10 @@ class TimePicker extends UI5Element {
 		}
 	}
 
+	_handleWheel(e) {
+		e.preventDefault();
+	}
+
 	getFormat() {
 		if (this._isPattern) {
 			this._oDateFormat = DateFormat.getInstance({
@@ -681,50 +681,17 @@ class TimePicker extends UI5Element {
 	}
 
 	_getSlidersContained() {
-		const formatArray = this.getFormat().aFormatArray,
-			slidersBuildArray = [false, false, false, false]; // hours minutes seconds am/pm
-
-		for (let i = 0; i < formatArray.length; i++) {
-			if (this._hoursParameters.maxHour !== 0) {
-				slidersBuildArray[0] = true;
-			}
-			if (this._hoursParameters.maxHour !== 0 && this._hoursParameters.isTwelveHoursFormat) {
-				slidersBuildArray[0] = true;
-			}
-			if (formatArray[i].type === "minute") {
-				slidersBuildArray[1] = true;
-			}
-			if (formatArray[i].type === "second") {
-				slidersBuildArray[2] = true;
-			}
-			if (formatArray[i].type === "amPmMarker") {
-				slidersBuildArray[3] = true;
-			}
-		}
-
-		return slidersBuildArray;
+		const formatArray = this.getFormat().aFormatArray;
+		return getTimeControlsByFormat(formatArray, this._hoursParameters);
 	}
 
 	_initHoursFormatParameters() {
 		const formatArray = this.getFormat().aFormatArray;
+		const config = getHoursConfigByFormat(formatArray[0].type);
 
-		if (formatArray[0].type === "hour0_23") {
-			this._hoursParameters.minHour = 0;
-			this._hoursParameters.maxHour = 23;
-			this._hoursParameters.isTwelveHoursFormat = false;
-		} else if (formatArray[0].type === "hour1_24") {
-			this._hoursParameters.minHour = 1;
-			this._hoursParameters.maxHour = 24;
-			this._hoursParameters.isTwelveHoursFormat = false;
-		} else if (formatArray[0].type === "hour0_11") {
-			this._hoursParameters.minHour = 0;
-			this._hoursParameters.maxHour = 11;
-			this._hoursParameters.isTwelveHoursFormat = true;
-		} else if (formatArray[0].type === "hour1_12") {
-			this._hoursParameters.minHour = 1;
-			this._hoursParameters.maxHour = 12;
-			this._hoursParameters.isTwelveHoursFormat = true;
-		}
+		this._hoursParameters.minHour = config.minHour;
+		this._hoursParameters.maxHour = config.maxHour;
+		this._hoursParameters.isTwelveHoursFormat = config.isTwelveHoursFormat;
 	}
 
 	/**

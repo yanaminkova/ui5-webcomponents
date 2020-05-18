@@ -96,7 +96,7 @@ const metadata = {
 		 * <b>Note:</b> Avalaible options are <code>None</code>, <code>SingleSelect</code>,
 		 * <code>MultiSelect</code>, and <code>Delete</code>.
 		 *
-		 * @type {string}
+		 * @type {ListMode}
 		 * @defaultvalue "None"
 		 * @public
 		 */
@@ -127,7 +127,7 @@ const metadata = {
 		 * item doesn't have a bottom separator.</li>
 		 * </ul>
 		 *
-		 * @type {string}
+		 * @type {ListSeparators}
 		 * @defaultvalue "All"
 		 * @public
 		 */
@@ -303,12 +303,24 @@ class List extends UI5Element {
 		return !this.header.length && this.headerText;
 	}
 
+	get headerID() {
+		return `${this._id}-header`;
+	}
+
 	get showNoDataText() {
 		return this.items.length === 0 && this.noDataText;
 	}
 
 	get showBusy() {
 		return this.busy || this.infiniteScroll;
+	}
+
+	get isMultiSelect() {
+		return this.mode === ListMode.MultiSelect;
+	}
+
+	get ariaLabelledBy() {
+		return this.shouldRenderH1 ? this.headerID : undefined;
 	}
 
 	onBeforeRendering() {

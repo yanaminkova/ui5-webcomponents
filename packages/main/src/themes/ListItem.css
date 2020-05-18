@@ -1,3 +1,5 @@
+@import "./InvisibleTextStyles.css";
+
 /* actionable (type="Active" + desktop) */
 :host([actionable]) {
 	cursor: pointer;
@@ -11,7 +13,7 @@
 /* selected and active */
 :host([active][actionable]),
 :host([selected][active][actionable]) {
-	background: var(--sapList_HighlightColor);
+	background: var(--sapList_Active_Background);
 }
 
 /* hovered */
@@ -81,7 +83,7 @@
 
 .ui5-li-desc {
 	color: var(--sapContent_LabelColor);
-	font-size: var(--sapFontMediumSize);
+	font-size: var(--sapFontSize);
 }
 
 .ui5-li-info {
