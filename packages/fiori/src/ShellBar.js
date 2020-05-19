@@ -364,6 +364,7 @@ class ShellBar extends UI5Element {
 	static get FIORI_3_BREAKPOINTS() {
 		return [
 			559,
+			696,
 			1023,
 			1439,
 			1919,
@@ -374,6 +375,7 @@ class ShellBar extends UI5Element {
 	static get FIORI_3_BREAKPOINTS_MAP() {
 		return {
 			"559": "S",
+			"696": "SM",
 			"1023": "M",
 			"1439": "L",
 			"1919": "XL",
@@ -381,10 +383,19 @@ class ShellBar extends UI5Element {
 		};
 	}
 
+	static get ICON_WIDTH() {
+		return 44;
+	}
+
+	static get SEARCH_WIDTH() {
+		return 240;
+	}
+
 	constructor() {
 		super();
 
 		this._itemsInfo = [];
+		this._overflowInfo = {};
 		this._isInitialRendering = true;
 		this._focusedItem = null;
 
@@ -568,21 +579,21 @@ class ShellBar extends UI5Element {
 	}
 
 	_handleActionsOverflow() {
+		let overflowCount = 0;
 		const rightContainerRect = this.shadowRoot.querySelector(".ui5-shellbar-overflow-container-right").getBoundingClientRect();
 		const icons = this.shadowRoot.querySelectorAll(".ui5-shellbar-button:not(.ui5-shellbar-overflow-button):not(.ui5-shellbar-invisible-button)");
-		const isRTL = getRTL();
+		const containerWidth = rightContainerRect.width;
+		const contentWidth = icons.length * ShellBar.ICON_WIDTH + (this.showSearchField ? ShellBar.SEARCH_WIDTH : 0);
 
-		let overflowCount = [].filter.call(icons, icon => {
-			const iconRect = icon.getBoundingClientRect();
+		if (containerWidth < contentWidth) {
+			let neededSpace = contentWidth - containerWidth + ShellBar.ICON_WIDTH; // + space for the overflow icon
 
-			if (isRTL) {
-				return (iconRect.left + iconRect.width) > (rightContainerRect.left + rightContainerRect.width);
-			}
-
-			return iconRect.left < rightContainerRect.left;
-		});
-
-		overflowCount = overflowCount.length;
+			overflowCount = [].filter.call(icons, () => {
+				const shouldOverflow = neededSpace > 0;
+				neededSpace -= ShellBar.ICON_WIDTH;
+				return shouldOverflow;
+			}).length;
+		}
 
 		const items = this._getAllItems(!!overflowCount);
 
@@ -740,7 +751,7 @@ class ShellBar extends UI5Element {
 					count: item.count || undefined,
 					refItemid: item._id,
 					text: item.text,
-					classes: "ui5-shellbar-custom-item ui5-shellbar-button",
+					classes: `ui5-shellbar-custom-item ui5-shellbar-button ui5-shellbar-custom-item-${index}`,
 					priority: 1,
 					domOrder: (++domOrder),
 					style: `order: ${2}`,

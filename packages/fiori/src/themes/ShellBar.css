@@ -175,10 +175,6 @@ slot[name="profile"] {
 	margin-right: 0;
 }
 
-:host([breakpoint-size="S"]) .ui5-shellbar-search-field {
-	width: 200px;
-}
-
 :host([breakpoint-size="M"]) .ui5-shellbar-root {
 	padding: 0.25rem 2rem;
 }
@@ -264,13 +260,14 @@ slot[name="profile"] {
 	overflow: hidden;
 	box-sizing: border-box;
 	white-space: nowrap;
-	margin-left: 8rem;
 	flex: 1;
 }
 
 .ui5-shellbar-overflow-container-right .ui5-shellbar-overflow-container-right-child {
 	display: flex;
-	float: right;
+	height: 100%;
+	align-items: center;
+	justify-content: flex-end;
 }
 
 .ui5-shellbar-overflow-button {
@@ -278,6 +275,10 @@ slot[name="profile"] {
 }
 
 :host([breakpoint-size="M"]) .ui5-shellbar-secondary-title {
+	display: none;
+}
+
+:host([breakpoint-size="SM"]) .ui5-shellbar-secondary-title {
 	display: none;
 }
 
@@ -308,10 +309,43 @@ slot[name="profile"] {
 	cursor: pointer;
 }
 
+:host([show-search-field]) ::slotted(ui5-input) {
+	width: 100%;
+}
+
 :host(:not([show-search-field])) .ui5-shellbar-search-field {
 	display: none;
 }
 
+:host([breakpoint-size="S"][show-search-field]) .ui5-shellbar-menu-button {
+	display: none;
+}
+
+:host([breakpoint-size="SM"][show-search-field]) .ui5-shellbar-menu-button {
+	display: none;
+}
+
+:host([breakpoint-size="S"][show-search-field]) .ui5-shellbar-overflow-container-middle {
+	display: none;
+}
+:host([breakpoint-size="SM"][show-search-field]) .ui5-shellbar-overflow-container-middle {
+	display: none;
+}
+
+:host([breakpoint-size="S"][show-search-field]) .ui5-shellbar-overflow-container-right {
+	width: 100%;
+}
+:host([breakpoint-size="SM"][show-search-field]) .ui5-shellbar-overflow-container-right {
+	width: 100%;
+}
+
+:host([show-search-field]) .ui5-shellbar-search-field {
+	flex-grow: 1;
+}
+
+:host([show-search-field]) .ui5-shellbar-overflow-container-right {
+	min-width: 25rem;
+}
 
 :host([breakpoint-size="L"]) .ui5-shellbar-with-searchfield .ui5-shellbar-overflow-container-right {
 	margin-left: 1rem;
@@ -359,10 +393,8 @@ ui5-icon[data-count]::before {
 }
 
 .ui5-shellbar-search-field {
-	z-index: 101;
-	position: absolute;
-	width: 240px;
-	top: 0.25rem;
+	max-width: 20rem;
+	min-width: 15rem;
 	height: 2.25rem;
 }
 
@@ -433,12 +465,12 @@ ui5-input[value-state]:not([value-stat="None"])[focused] {
 }
 
 :host [dir="rtl"] ::slotted(ui5-button[slot="startButton"]) {
-	margin-left: 0.5rem;
-	margin-right: 0;
+	margin-right: .5rem;
+	margin-left: 0;
 }
 
 :host [dir="rtl"] .ui5-shellbar-menu-button {
-	margin-right: 0.5rem;
+	margin-right: .5rem;
 	margin-left: 0;
 }
 
@@ -447,13 +479,12 @@ ui5-input[value-state]:not([value-stat="None"])[focused] {
 	margin-left: 0;
 }
 
-[dir="rtl"] .ui5-shellbar-overflow-container-right {
-	margin-right: 8rem;
-	margin-left: 0;
+:host([breakpoint-size="L"]) .ui5-shellbar-with-searchfield[dir="rtl"] .ui5-shellbar-overflow-container-right {
+	margin-right: 1rem;
 }
 
-[dir="rtl"] .ui5-shellbar-overflow-container-right .ui5-shellbar-overflow-container-right-child {
-	float: left;
+:host([breakpoint-size="XL"]) .ui5-shellbar-with-searchfield[dir="rtl"] .ui5-shellbar-overflow-container-right {
+	margin-right: 1rem;
 }
 
 :host([breakpoint-size="S"]) [dir="rtl"] .ui5-shellbar-overflow-container-right {

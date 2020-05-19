@@ -63,18 +63,15 @@
 		{{/if}}
 	</div>
 
-	<div id="{{_id}}-searchfield-wrapper"
-		class="ui5-shellbar-search-field"
-		style="{{styles.searchField}}"
-	>
-		{{#if searchField.length}}
-			<slot name="searchField"></slot>
-		{{/if}}
-	</div>
-
 	<div class="ui5-shellbar-overflow-container ui5-shellbar-overflow-container-right">
 
 		<div class="ui5-shellbar-overflow-container-right-child">
+
+			<div id="{{_id}}-searchfield-wrapper" class="ui5-shellbar-search-field">
+				{{#if searchField.length}}
+					<slot name="searchField"></slot>
+				{{/if}}
+			</div>
 
 			{{#if hasSearchField}}
 				<ui5-button
