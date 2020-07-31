@@ -17,13 +17,13 @@ describe("Attributes propagation", () => {
 
 		btnOpenPopover.click();
 
-		assert.ok(popover.shadow$(".ui5-popover-arr").isDisplayedInViewport(), "Initially popover has arrow.");
+		assert.ok(popover.shadow$(".ui5-popover-arrow").isDisplayedInViewport(), "Initially popover has arrow.");
 
 		browser.execute(() => {
 			document.getElementById("pop").toggleAttribute("no-arrow");
 		});
 
-		assert.ok(!popover.shadow$(".ui5-popover-arr").isDisplayedInViewport(), "The arrow was hidden.");
+		assert.ok(!popover.shadow$(".ui5-popover-arrow").isDisplayedInViewport(), "The arrow was hidden.");
 	});
 
 });
@@ -42,6 +42,32 @@ describe("Popover general interaction", () => {
 
 		field.click();
 		assert.ok(!popover.isDisplayedInViewport(), "Popover is closed.");
+	});
+
+	it("tests popover does not close with opener", () => {
+		const popover = browser.$("#quickViewCard");
+		const btnOpenPopover = $("#btnQuickViewCardOpener");
+		const btnMoveFocus = $("#btnMoveFocus");
+
+		// assert - the opener is visible
+		assert.strictEqual(btnOpenPopover.isDisplayedInViewport(), true,
+			"Opener is available.");
+
+		// act - open popover and hide opener
+		btnOpenPopover.click();
+
+		browser.pause(500);
+
+		// assert - the popover remains open, although opener is not visible
+		assert.strictEqual(popover.getAttribute("open"), "true",
+			"Popover remains open.");
+		assert.strictEqual(popover.isDisplayedInViewport(), true,
+			"Popover remains open.");
+		assert.strictEqual(btnOpenPopover.isDisplayedInViewport(), false,
+			"Opener is not available.");
+
+		// close the popover
+		btnMoveFocus.click();
 	});
 
 	it("tests clicking inside the popover does not close it", () => {
@@ -64,13 +90,13 @@ describe("Popover general interaction", () => {
 
 		manyItemsSelect.click();
 
-		const lastListItem = items[items.length - 1];
+		const itemBeforeLastItem = items[items.length - 2];
 
-		assert.strictEqual(lastListItem.isDisplayedInViewport(), false, "Last item is not displayed after openining");
+		assert.strictEqual(itemBeforeLastItem.isDisplayedInViewport(), false, "Last item is not displayed after openining");
 
-		lastListItem.scrollIntoView();
+		itemBeforeLastItem.scrollIntoView();
 
-		assert.strictEqual(lastListItem.isDisplayedInViewport(), true, "Last item is displayed after scrolling");
+		assert.strictEqual(itemBeforeLastItem.isDisplayedInViewport(), true, "Last item is displayed after scrolling");
 
 		manyItemsSelect.click();
 	});
@@ -82,13 +108,13 @@ describe("Popover general interaction", () => {
 
 		openBigPopoverButton.click();
 
-		const lastListItem = items[items.length - 1];
+		const itemBeforeLastItem = items[items.length - 2];
 
-		assert.strictEqual(lastListItem.isDisplayedInViewport(), false, "Last item is not displayed after openining");
+		assert.strictEqual(itemBeforeLastItem.isDisplayedInViewport(), false, "Last item is not displayed after openining");
 
-		lastListItem.scrollIntoView();
+		itemBeforeLastItem.scrollIntoView();
 
-		assert.strictEqual(lastListItem.isDisplayedInViewport(), true, "Last item is displayed after scrolling");
+		assert.strictEqual(itemBeforeLastItem.isDisplayedInViewport(), true, "Last item is displayed after scrolling");
 	});
 
 	it("tests modal popover", () => {
@@ -134,7 +160,7 @@ describe("Popover general interaction", () => {
 		browser.keys("Tab");
 
 		assert.ok(!ff.getProperty("focused"), "The first focusable element is focused.");
-		
+
 		// button
 		browser.keys("Tab");
 
@@ -178,5 +204,20 @@ describe("Popover general interaction", () => {
 		browser.keys(["Shift", "Tab"]);
 
 		assert.ok(ff.getProperty("focused"), "The first focusable element is focused.");
+	});
+});
+
+describe("Acc", () => {
+	browser.url("http://localhost:8080/test-resources/pages/Popover.html");
+
+	it("tests aria-labelledby and aria-label", () => {
+		const popover = browser.$("ui5-popover");
+		popover.removeAttribute("aria-label");
+		assert.ok(popover.shadow$(".ui5-popup-root").getAttribute("aria-labelledby").length, "Popover has aria-labelledby.");
+		assert.ok(!popover.shadow$(".ui5-popup-root").getAttribute("aria-label"), "Popover does not have aria-label.");
+
+		popover.setAttribute("aria-label", "text");
+		assert.ok(!popover.shadow$(".ui5-popup-root").getAttribute("aria-labelledby"), "Popover does not have aria-labelledby.");
+		assert.ok(popover.shadow$(".ui5-popup-root").getAttribute("aria-label").length, "Popover has aria-label.");
 	});
 });

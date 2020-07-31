@@ -1,4 +1,3 @@
-
 const datepicker = require("../pageobjects/DatePickerTestPage");
 const assert = require("chai").assert;
 
@@ -23,7 +22,19 @@ describe("Date Picker Tests", () => {
 		assert.equal(date.getFullYear(), 2011);
 	});
 
+	it("input receives value in format pattern depending on the set language", () => {
+		browser.url("http://localhost:8080/test-resources/pages/DatePicker_test_page.html?sap-ui-language=bg");
+		datepicker.id = "#dp16";
+
+		const setDateButton = browser.$("#b1");
+
+		setDateButton.click();
+
+		assert.equal(datepicker.innerInput.getValue(), "11 декември 2018 г.");
+	});
+
 	it("custom formatting", () => {
+		datepicker.open();
 		datepicker.id = "#dp2";
 
 		assert.ok(datepicker.isValid("2018, 05/05"), "custom value is valid");
@@ -37,6 +48,26 @@ describe("Date Picker Tests", () => {
 
 		const contentWrapper = browser.$("#dp3").shadow$("ui5-input").shadow$(".ui5-input-content");
 		assert.ok(contentWrapper.isDisplayedInViewport(), "content wrapper has error styles");
+	});
+
+	it("Can focus the input after open", () => {
+		datepicker.id = "#dp1";
+		datepicker.openPicker({ focusInput: true });
+		const a = datepicker.innerInput.isFocusedDeep();
+
+		console.log(datepicker.innerInput.isFocusedDeep());
+		assert.ok(a, "inner input is focused");
+	});
+
+	it("Value State Message", () => {
+		datepicker.id = "#dp17"
+		datepicker.root.click();
+
+		const inputStaticAreaItem = datepicker.inputStaticAreaItem;
+		const popover = inputStaticAreaItem.shadow$("ui5-popover");
+
+		const slot = popover.$("#coolValueStateMessage");
+		assert.notOk(slot.error, "Value State message slot is working");
 	});
 
 	it("disabled", () => {
@@ -79,13 +110,6 @@ describe("Date Picker Tests", () => {
 		datepicker.root.setAttribute("value", "Rab. I 6, 1440 AH");
 
 		assert.equal(datepicker.innerInput.getAttribute("value"), "Rab. I 6, 1440 AH", "input has correct Islamic value");
-	});
-
-	it("Can focus the input after open", () => {
-		datepicker.id = "#dp1";
-		datepicker.openPicker({ focusInput: true });
-
-		assert.ok(datepicker.innerInput.isFocusedDeep(), "inner input is focused");
 	});
 
 	it("Selected date from daypicker is the same as datepicker date", () => {
@@ -300,6 +324,10 @@ describe("Date Picker Tests", () => {
 		browser.keys(["Alt", "ArrowUp", "NULL"]);
 
 		assert.ok(datepicker.isPickerOpen(), "datepicker is open");
+
+		browser.keys(["Alt", "ArrowUp", "NULL"]);
+
+		assert.notOk(datepicker.isPickerOpen(), "datepicker is closed");
 	});
 
 	it("[Alt] + [DOWN] toggles the calendar", () => {
@@ -311,6 +339,31 @@ describe("Date Picker Tests", () => {
 		browser.keys(["Alt", "ArrowDown", "NULL"]);
 
 		assert.ok(datepicker.isPickerOpen(), "datepicker is open");
+
+		browser.keys(["Alt", "ArrowDown", "NULL"]);
+
+		assert.notOk(datepicker.isPickerOpen(), "datepicker is closed");
+	});
+
+	it("[F4] shows year picker after date picker is open", () => {
+		datepicker.id = "#dp11";
+
+		datepicker.valueHelpIcon.click()
+		browser.keys("F4");
+
+		assert.notOk(datepicker.calendar.getProperty("_yearPicker")._hidden, "Year picker is open");
+		datepicker.valueHelpIcon.click(); // close the datepicker
+	});
+
+	it("[F4] on year picker doesn't close the date picker", () => {
+		datepicker.id = "#dp11";
+
+		datepicker.valueHelpIcon.click();
+		browser.keys("F4");
+
+		browser.keys("F4");
+
+		assert.ok(datepicker.isPickerOpen, "Datepicker remains open");
 	});
 
 	it("daypicker extreme values max", () => {
@@ -551,7 +604,7 @@ describe("Date Picker Tests", () => {
 		while(datepicker.root.getValue() !== ""){
 			datepicker.root.keys("Backspace");
 		}
- 
+
 		datepicker.root.keys("May 5, 2100");
 		datepicker.root.keys("Enter");
 
@@ -568,7 +621,7 @@ describe("Date Picker Tests", () => {
 		while(datepicker.root.getValue() !== ""){
 			datepicker.root.keys("Backspace");
 		}
- 
+
 		datepicker.root.keys("Jan 8, 2100");
 		datepicker.root.keys("Enter");
 
@@ -578,7 +631,7 @@ describe("Date Picker Tests", () => {
 		while(datepicker.root.getValue() !== ""){
 			datepicker.root.keys("Backspace");
 		}
- 
+
 		datepicker.root.keys("Jan 1, 2000");
 		datepicker.root.keys("Enter");
 
@@ -606,7 +659,6 @@ describe("Date Picker Tests", () => {
 		datepicker.root.keys("ArrowRight");
 		datepicker.root.keys("ArrowRight");
 		datepicker.root.keys("ArrowRight");
-		datepicker.root.keys("ArrowDown");
 		assert.ok(datepicker.getDisplayedYear(7).isFocusedDeep(), "Years out of range can not be reached with keyboard");
 	});
 
@@ -638,5 +690,31 @@ describe("Date Picker Tests", () => {
 		datepicker.id = "#dp34";
 		datepicker.openPicker({ focusInput: false });
 		assert.ok(datepicker.getDisplayedDay(14).isFocusedDeep(), "Days out of range are disabled");
+	});
+
+	it("Tests week numbers column visibility", () => {
+		// act
+		datepicker.id = "#dp18";
+		datepicker.valueHelpIcon.click()
+
+		// assert
+		const weekNumbersCol1 = datepicker.dayPicker.shadow$(".ui5-dp-weeknumber-container");
+		assert.equal(weekNumbersCol1.isExisting(), true, "The week numbers column is visible.");
+
+		// close date picker
+		datepicker.innerInput.click();
+		browser.keys(["Alt", "ArrowUp", "NULL"]);
+
+		// act
+		datepicker.id = "#dp19";
+		datepicker.valueHelpIcon.click()
+
+		// assert
+		const weekNumbersCol2 = datepicker.dayPicker.shadow$(".ui5-dp-weeknumber-container");
+		assert.equal(weekNumbersCol2.isExisting(), false, "The week numbers column is hidden.");
+
+		// close date picker
+		datepicker.innerInput.click();
+		browser.keys(["Alt", "ArrowUp", "NULL"]);
 	});
 });

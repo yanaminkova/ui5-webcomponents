@@ -6,6 +6,7 @@ import { fetchI18nBundle, getI18nBundle } from "@ui5/webcomponents-base/dist/i18
 import { getFeature } from "@ui5/webcomponents-base/dist/FeaturesRegistry.js";
 import { isIE } from "@ui5/webcomponents-base/dist/Device.js";
 import ValueState from "@ui5/webcomponents-base/dist/types/ValueState.js";
+import Popover from "./Popover.js";
 
 import TextAreaTemplate from "./generated/templates/TextAreaTemplate.lit.js";
 import TextAreaPopoverTemplate from "./generated/templates/TextAreaPopoverTemplate.lit.js";
@@ -27,6 +28,7 @@ import valueStateMessageStyles from "./generated/themes/ValueStateMessage.css.js
  */
 const metadata = {
 	tag: "ui5-textarea",
+	languageAware: true,
 	managedSlots: true,
 	properties: /** @lends sap.ui.webcomponents.main.TextArea.prototype */ {
 		/**
@@ -403,14 +405,14 @@ class TextArea extends UI5Element {
 	}
 
 	_oninput(event) {
-		const nativeTextarea = this.getInputDomRef();
+		const nativeTextArea = this.getInputDomRef();
 
 		/* skip calling change event when an textarea with a placeholder is focused on IE
 			- value of the host and the internal textarea should be different in case of actual input
 			- input is called when a key is pressed => keyup should not be called yet
 		*/
-		const skipFiring = (this.getInputDomRef().value === this.value) && isIE() && !this._keyDown && !!this.placeholder;
-		if (event.target === nativeTextarea) {
+		const skipFiring = (nativeTextArea.value === this.value) && isIE() && !this._keyDown && !!this.placeholder;
+		if (event.target === nativeTextArea) {
 			// stop the native event, as the semantic "input" would be fired.
 			event.stopImmediatePropagation();
 		}
@@ -419,7 +421,7 @@ class TextArea extends UI5Element {
 			return;
 		}
 
-		this.value = nativeTextarea.value;
+		this.value = nativeTextArea.value;
 		this.fireEvent("input", {});
 
 		// Angular two way data binding
@@ -447,7 +449,7 @@ class TextArea extends UI5Element {
 
 	async closePopover() {
 		this.popover = await this._getPopover();
-		this.popover && this.popover.close(false, false, true);
+		this.popover && this.popover.close();
 	}
 
 	async _getPopover() {
@@ -456,7 +458,7 @@ class TextArea extends UI5Element {
 	}
 
 	_tokenizeText(value) {
-		const tokenizedText = value.replace(/&/gm, "&amp;").replace(/"/gm, "&quot;").replace(/"/gm, "&#39;").replace(/</gm, "&lt;")
+		const tokenizedText = value.replace(/&/gm, "&amp;").replace(/"/gm, "&quot;").replace(/'/gm, "&apos;").replace(/</gm, "&lt;")
 			.replace(/>/gm, "&gt;")
 			.split("\n");
 
@@ -584,7 +586,10 @@ class TextArea extends UI5Element {
 	}
 
 	static async onDefine() {
-		await fetchI18nBundle("@ui5/webcomponents");
+		await Promise.all([
+			Popover.define(),
+			fetchI18nBundle("@ui5/webcomponents"),
+		]);
 	}
 }
 

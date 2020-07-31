@@ -1,9 +1,14 @@
 import { registerFeature } from "@ui5/webcomponents-base/dist/FeaturesRegistry.js";
+import { getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
 
 import List from "../List.js";
 import ResponsivePopover from "../ResponsivePopover.js";
 import "../SuggestionItem.js";
 
+import {
+	LIST_ITEM_POSITION,
+	LIST_ITEM_SELECTED,
+} from "../generated/i18n/i18n-defaults.js";
 /**
  * A class to manage the <code>Input</code suggestion items.
  *
@@ -12,7 +17,7 @@ import "../SuggestionItem.js";
  * @author SAP SE
  */
 class Suggestions {
-	constructor(component, slotName, handleFocus) {
+	constructor(component, slotName, highlight, handleFocus) {
 		// The component, that the suggestion would plug into.
 		this.component = component;
 
@@ -22,29 +27,44 @@ class Suggestions {
 		// Defines, if the focus will be moved via the arrow keys.
 		this.handleFocus = handleFocus;
 
+		// Defines, if the suggestions should highlight.
+		this.highlight = highlight;
+
 		// Press and Focus handlers
 		this.fnOnSuggestionItemPress = this.onItemPress.bind(this);
 		this.fnOnSuggestionItemFocus = this.onItemFocused.bind(this);
+		this.fnOnSuggestionItemMouseOver = this.onItemMouseOver.bind(this);
+		this.fnOnSuggestionItemMouseOut = this.onItemMouseOut.bind(this);
 
 		// An integer value to store the currently selected item position,
 		// that changes due to user interaction.
 		this.selectedItemIndex = null;
+
+		this.i18nBundle = getI18nBundle("@ui5/webcomponents");
+
+		this.accInfo = {};
 	}
 
 	/* Public methods */
-	defaultSlotProperties() {
+	defaultSlotProperties(hightlightValue) {
 		const inputSuggestionItems = this._getComponent().suggestionItems;
-
+		const highlight = this.highlight && !!hightlightValue;
 		const suggestions = [];
-		inputSuggestionItems.map(suggestion => {
+
+		inputSuggestionItems.map((suggestion, idx) => {
+			const text = highlight ? this.getHighlightedText(suggestion, hightlightValue) : this.getRowText(suggestion);
+			const description = highlight ? this.getHighlightedDesc(suggestion, hightlightValue) : this.getRowDesc(suggestion);
+
 			return suggestions.push({
-				text: suggestion.text || suggestion.textContent, // keep textContent for compatibility
-				description: suggestion.description || undefined,
+				text,
+				description,
 				image: suggestion.image || undefined,
 				icon: suggestion.icon || undefined,
+				type: suggestion.type || undefined,
 				info: suggestion.info || undefined,
 				infoState: suggestion.infoState,
 				group: suggestion.group,
+				key: idx,
 			});
 		});
 
@@ -80,14 +100,19 @@ class Suggestions {
 		return false;
 	}
 
-	toggle(bToggle) {
+	toggle(bToggle, { preventFocusRestore }) {
 		const toggle = bToggle !== undefined ? bToggle : !this.isOpened();
 
 		if (toggle) {
 			this.open();
 		} else {
-			this.close();
+			this.close(preventFocusRestore);
 		}
+	}
+
+	async _isScrollable() {
+		const sc = await this._getScrollContainer();
+		return sc.offsetHeight < sc.scrollHeight;
 	}
 
 	async open() {
@@ -96,9 +121,9 @@ class Suggestions {
 		this.responsivePopover.open(this._getComponent());
 	}
 
-	async close() {
+	async close(preventFocusRestore = false) {
 		this.responsivePopover = await this._respPopover();
-		this.responsivePopover.close();
+		this.responsivePopover.close(false, false, preventFocusRestore);
 	}
 
 	updateSelectedItemPosition(pos) {
@@ -110,10 +135,31 @@ class Suggestions {
 		this._getComponent().onItemFocused();
 	}
 
-	onItemSelected(selectedItem, keyboardUsed) {
-		const item = selectedItem || this._getItems()[this.selectedItemIndex];
+	onItemMouseOver(event) {
+		this._getComponent().onItemMouseOver(event);
+	}
 
-		this.selectedItemIndex = this._getItems().indexOf(item);
+	onItemMouseOut(event) {
+		this._getComponent().onItemMouseOut(event);
+	}
+
+	onItemSelected(selectedItem, keyboardUsed) {
+		const allItems = this._getItems();
+		const item = selectedItem || allItems[this.selectedItemIndex];
+
+		this.selectedItemIndex = allItems.indexOf(item);
+
+		this.accInfo = {
+			currentPos: this.selectedItemIndex + 1,
+			listSize: allItems.length,
+			itemText: item.textContent,
+		};
+
+		// If the item is "Inactive", prevent selection with SPACE or ENTER
+		// to have consistency with the way "Inactive" items behave in the ui5-list
+		if (item.type === "Inactive") {
+			return;
+		}
 
 		this._getComponent().onItemSelected(this._getRealItems()[this.selectedItemIndex], keyboardUsed);
 		item.selected = false;
@@ -136,10 +182,14 @@ class Suggestions {
 
 	async _attachItemsListeners() {
 		const list = await this._getList();
-		list.removeEventListener("ui5-itemPress", this.fnOnSuggestionItemPress);
-		list.addEventListener("ui5-itemPress", this.fnOnSuggestionItemPress);
-		list.removeEventListener("ui5-itemFocused", this.fnOnSuggestionItemFocus);
-		list.addEventListener("ui5-itemFocused", this.fnOnSuggestionItemFocus);
+		list.removeEventListener("ui5-item-press", this.fnOnSuggestionItemPress);
+		list.addEventListener("ui5-item-press", this.fnOnSuggestionItemPress);
+		list.removeEventListener("ui5-item-focused", this.fnOnSuggestionItemFocus);
+		list.addEventListener("ui5-item-focused", this.fnOnSuggestionItemFocus);
+		list.removeEventListener("mouseover", this.fnOnSuggestionItemMouseOver);
+		list.addEventListener("mouseover", this.fnOnSuggestionItemMouseOver);
+		list.removeEventListener("mouseout", this.fnOnSuggestionItemMouseOut);
+		list.addEventListener("mouseout", this.fnOnSuggestionItemMouseOut);
 	}
 
 	_attachPopupListeners() {
@@ -148,12 +198,12 @@ class Suggestions {
 		}
 
 		if (!this.attachedAfterOpened) {
-			this._respPopover.addEventListener("ui5-afterOpen", this._onOpen.bind(this));
+			this._respPopover.addEventListener("ui5-after-open", this._onOpen.bind(this));
 			this.attachedAfterOpened = true;
 		}
 
 		if (!this.attachedAfterClose) {
-			this._respPopover.addEventListener("ui5-afterClose", this._onClose.bind(this));
+			this._respPopover.addEventListener("ui5-after-close", this._onClose.bind(this));
 			this.attachedAfterClose = true;
 		}
 	}
@@ -220,6 +270,12 @@ class Suggestions {
 		const currentItem = items[nextIdx];
 		const previousItem = items[previousIdx];
 
+		this.accInfo = {
+			currentPos: nextIdx + 1,
+			listSize: items.length,
+			itemText: currentItem.textContent,
+		};
+
 		if (previousItem) {
 			previousItem.selected = false;
 		}
@@ -244,25 +300,26 @@ class Suggestions {
 		const rectInput = this._getComponent().getDomRef().getBoundingClientRect();
 		const windowHeight = (window.innerHeight || document.documentElement.clientHeight);
 
-		return (rectItem.top <= windowHeight) && (rectItem.top >= rectInput.top);
+		return (rectItem.top + Suggestions.SCROLL_STEP <= windowHeight) && (rectItem.top >= rectInput.top);
 	}
 
-	_scrollItemIntoView(item) {
-		const pos = item.getDomRef().offsetTop - Suggestions.SCROLL_STEP;
-		this._getScrollContainer().scrollTop = pos;
+	async _scrollItemIntoView(item) {
+		const pos = item.getDomRef().offsetTop;
+		const scrollContainer = await this._getScrollContainer();
+		scrollContainer.scrollTop = pos;
 	}
 
 	async _getScrollContainer() {
 		if (!this._scrollContainer) {
 			await this._respPopover();
-			this._scrollContainer = this.responsivePopover.shadowRoot.querySelector(".ui5-popover-content");
+			this._scrollContainer = this.responsivePopover.shadowRoot.querySelector(".ui5-popup-content");
 		}
 
 		return this._scrollContainer;
 	}
 
 	_getItems() {
-		return [].slice.call(this.responsivePopover.querySelectorAll("ui5-li, ui5-li-groupheader"));
+		return [...this.responsivePopover.querySelector("ui5-list").children];
 	}
 
 	_getComponent() {
@@ -292,9 +349,55 @@ class Suggestions {
 		this.responsivePopover = staticAreaItem.querySelector("ui5-responsive-popover");
 		return this.responsivePopover;
 	}
+
+	get itemSelectionAnnounce() {
+		const i18nBundle = this.i18nBundle,
+			itemPositionText = i18nBundle.getText(LIST_ITEM_POSITION, [this.accInfo.currentPos], [this.accInfo.listSize]),
+			itemSelectionText = i18nBundle.getText(LIST_ITEM_SELECTED);
+
+		return `${itemPositionText} ${this.accInfo.itemText} ${itemSelectionText}`;
+	}
+
+	getRowText(suggestion) {
+		return this.sanitizeText(suggestion.text || suggestion.textContent);
+	}
+
+	getRowDesc(suggestion) {
+		if (suggestion.description) {
+			return this.sanitizeText(suggestion.description);
+		}
+	}
+
+	getHighlightedText(suggestion, input) {
+		let text = suggestion.text || suggestion.textContent;
+		text = this.sanitizeText(text);
+
+		return this.hightlightInput(text, input);
+	}
+
+	getHighlightedDesc(suggestion, input) {
+		let text = suggestion.description;
+		text = this.sanitizeText(text);
+
+		return this.hightlightInput(text, input);
+	}
+
+	hightlightInput(text, input) {
+		if (!text) {
+			return text;
+		}
+
+		const inputEscaped = input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+		const regEx = new RegExp(inputEscaped, "ig");
+		return text.replace(regEx, match => `<b>${match}</b>`);
+	}
+
+	sanitizeText(text) {
+		return text && text.replace("<", "&lt");
+	}
 }
 
-Suggestions.SCROLL_STEP = 48;
+Suggestions.SCROLL_STEP = 60;
 
 // The List and Popover components would be rendered
 // by the issuer component`s template.

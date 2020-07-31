@@ -1,4 +1,3 @@
-import litRender from "@ui5/webcomponents-base/dist/renderer/LitRenderer.js";
 import { isPhone } from "@ui5/webcomponents-base/dist/Device.js";
 import { getNextZIndex } from "./popup-utils/PopupUtils.js";
 import ResponsivePopoverTemplate from "./generated/templates/ResponsivePopoverTemplate.lit.js";
@@ -80,12 +79,8 @@ class ResponsivePopover extends Popover {
 		return metadata;
 	}
 
-	static get render() {
-		return litRender;
-	}
-
 	static get styles() {
-		return ResponsivePopoverCss;
+		return [...Popover.styles, ResponsivePopoverCss];
 	}
 
 	static get template() {
@@ -106,6 +101,12 @@ class ResponsivePopover extends Popover {
 	 * @public
 	 */
 	open(opener) {
+		this.style.display = this._isPhone ? "contents" : "";
+
+		if (this.isOpen() || (this._dialog && this._dialog.isOpen())) {
+			return;
+		}
+
 		if (!isPhone()) {
 			// make popover width be >= of the opener's width
 			if (!this.noStretch) {
@@ -123,12 +124,24 @@ class ResponsivePopover extends Popover {
 	 * Closes the popover/dialog.
 	 * @public
 	 */
-	close() {
+	close(escPressed = false, preventRegistryUpdate = false, preventFocusRestore = false) {
 		if (!isPhone()) {
-			super.close();
+			super.close(escPressed, preventRegistryUpdate, preventFocusRestore);
 		} else {
 			this._dialog.close();
 		}
+	}
+
+	toggle(opener) {
+		if (this.isOpen()) {
+			return this.close();
+		}
+
+		this.open(opener);
+	}
+
+	isOpen() {
+		return isPhone() ? this._dialog.isOpen() : super.isOpen();
 	}
 
 	get styles() {

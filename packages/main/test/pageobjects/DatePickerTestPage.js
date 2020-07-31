@@ -24,7 +24,7 @@ class DatePickerTestPage {
 	}
 
 	get popoverContent() {
-		return browser.$(this._sut).shadow$("ui5-responsive-popover").shadow$("ui5-popover").shadow$(".ui5-popover-root");
+		return browser.$(this._sut).shadow$("ui5-responsive-popover").shadow$("ui5-popover").shadow$(".ui5-popup-root");
 	}
 
 	get calendar() {
@@ -37,6 +37,10 @@ class DatePickerTestPage {
 
 	get innerInput() {
 		return browser.$(this._sut).shadow$("ui5-input").shadow$("input");
+	}
+
+	get inputStaticAreaItem() {
+		return browser.$(`.${this.input.getProperty("_id")}`);
 	}
 
 	hasIcon() {
@@ -63,6 +67,10 @@ class DatePickerTestPage {
 
 	get btnMonth() {
 		return browser.$(`.${this.staticAreaItemClassName}`).shadow$("ui5-calendar").shadow$(`ui5-calendar-header`).shadow$(`div[data-sap-show-picker="Month"]`);
+	}
+
+	get dayPicker() {
+		return browser.$(`.${this.staticAreaItemClassName}`).shadow$(`ui5-calendar`).shadow$(`ui5-daypicker`);
 	}
 
 	getPickerDate(timestamp) {

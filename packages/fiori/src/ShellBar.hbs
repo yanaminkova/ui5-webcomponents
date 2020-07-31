@@ -1,6 +1,8 @@
 <div
 	class="{{classes.wrapper}}"
-	dir="{{rtl}}"
+	dir="{{effectiveDir}}"
+	role="banner"
+	aria-label="{{_shellbarText}}"
 >
 	<div class="ui5-shellbar-overflow-container ui5-shellbar-overflow-container-left">
 
@@ -8,14 +10,36 @@
 				<slot name="startButton"></slot>
 		{{/if}}
 
-		{{#unless interactiveLogo}}
-			<img class="ui5-shellbar-logo" src="{{logo}}" @click="{{_logoPress}}" />
-		{{/unless}}
+		{{#if hasFocusableLogo}}
+			<span class="ui5-shellbar-logo"
+				role="button"
+				aria-label="{{_logoText}}"
+				title="{{_logoText}}"
+				@click="{{_logoPress}}"
+				@keydown="{{_logoKeydown}}"
+				@keyup="{{_logoKeyup}}"
+				tabindex="0"
+				data-ui5-stable="logo"
+			>
+				<slot name="logo"></slot>
+			</span>
+		{{/if}}
 
 		{{#if showArrowDown}}
-			<button tabindex="{{menuBtnTabindex}}" class="{{classes.button}}" @click="{{_header.press}}">
-				{{#if interactiveLogo}}
-					<img class="ui5-shellbar-logo" src="{{logo}}" @click="{{_logoPress}}" />
+			<button tabindex="{{menuBtnTabindex}}"
+				class="{{classes.button}}"
+				@click="{{_header.press}}"
+				aria-haspopup="{{menuBtnHasPopup}}"
+				aria-expanded="{{menuPopoverExpanded}}"
+			>
+				{{#if hasNonFocusableLogo}}
+					<span
+						class="ui5-shellbar-logo"
+						aria-label="{{_logoText}}"
+						title="{{_logoText}}"
+					>
+						<slot name="logo"></slot>
+					</span>
 				{{/if}}
 
 				{{#if primaryTitle}}
@@ -35,9 +59,13 @@
 		{{#if showCoPilot}}
 			<div class="ui5-shellbar-copilot-wrapper"
 				tabindex="0"
+				aria-label="{{_copilotText}}"
+				title="{{_copilotText}}"
 				@keydown="{{_coPilotKeydown}}"
 				@keyup="{{_coPilotKeyup}}"
-				?active="{{coPilotActive}}">
+				?active="{{coPilotActive}}"
+				data-ui5-stable="copilot"
+			>
 				{{> coPilot}}
 			</div>
 		{{else}}
@@ -66,6 +94,9 @@
 					data-ui5-text="Search"
 					data-ui5-notification-count="{{notificationCount}}"
 					@click={{_handleSearchIconPress}}
+					aria-label="{{_searchText}}"
+					title="{{_searchText}}"
+					._buttonAccInfo="{{accInfo.search}}"
 				></ui5-button>
 			{{/if}}
 
@@ -75,9 +106,11 @@
 					style="{{this.style}}"
 					class="{{this.classes}}"
 					icon="{{this.icon}}"
+					title="{{this.title}}"
 					data-count="{{this.count}}"
 					data-ui5-notification-count="{{../notificationCount}}"
 					data-ui5-external-action-item-id="{{this.refItemid}}"
+					data-ui5-stable="{{stableDomRef}}"
 					@click={{this.press}}
 				></ui5-button>
 			{{/each}}
@@ -91,6 +124,10 @@
 				data-ui5-text="Notifications"
 				data-ui5-notification-count="{{notificationCount}}"
 				@click={{_handleNotificationsPress}}
+				aria-label="{{_notificationsText}}"
+				title="{{_notificationsText}}"
+				._buttonAccInfo="{{accInfo.notifications}}"
+				data-ui5-stable="notifications"
 			></ui5-button>
 			{{/if}}
 
@@ -100,6 +137,10 @@
 				class="{{classes.items.overflow}} ui5-shellbar-button ui5-shellbar-overflow-button-shown ui5-shellbar-overflow-button"
 				icon="sap-icon://overflow"
 				@click="{{_handleOverflowPress}}"
+				aria-label="{{_overflowText}}"
+				title="{{_overflowText}}"
+				._buttonAccInfo="{{accInfo.overflow}}"
+				data-ui5-stable="overflow"
 			></ui5-button>
 
 			{{#if hasProfile}}
@@ -108,10 +149,15 @@
 					id="{{this._id}}-item-3"
 					@click={{_handleProfilePress}}
 					style="{{styles.items.profile}}"
-					class="ui5-shellbar-button ui5-shellbar-image-button">
-						<slot
-							name="profile"
-						></slot>
+					aria-label="{{_profileText}}"
+					title="{{_profileText}}"
+					._buttonAccInfo="{{accInfo.profile}}"
+					class="ui5-shellbar-button ui5-shellbar-image-button"
+					data-ui5-stable="profile"
+				>
+					<slot
+						name="profile"
+					></slot>
 				</ui5-button>
 			{{/if}}
 
@@ -123,6 +169,10 @@
 				icon="sap-icon://grid"
 				data-ui5-text="Product Switch"
 				@click={{_handleProductSwitchPress}}
+				aria-label="{{_productsText}}"
+				title="{{_productsText}}"
+				._buttonAccInfo="{{accInfo.products}}"
+				data-ui5-stable="product-switch"
 			></ui5-button>
 			{{/if}}
 		</div>
@@ -130,7 +180,7 @@
 </div>
 
 {{#*inline "coPilot"}}
-	<svg @click="{{_coPilotClick}}" focusable="false" width="44" height="44" viewBox="-150 -150 300 300" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="ui5-shellbar-coPilot">
+	<svg @click="{{_coPilotClick}}" focusable="false" width="44" role="presentation" aria-hidden="true" height="44" viewBox="-150 -150 300 300" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="ui5-shellbar-coPilot">
 		<defs>
 			<linearGradient id="f" x1="0%" x2="100%" y1="100%" y2="0%"><stop offset="0%" stop-color="#c0d9f2" stop-opacity=".87"/><stop offset="80%" stop-color="#fff" stop-opacity=".87"/></linearGradient>
 			<linearGradient id="e" x1="0%" x2="100%" y1="100%" y2="0%"><stop offset="0%" stop-color="#b4d2ff" stop-opacity=".16"/><stop offset="80%" stop-color="#fff" stop-opacity=".16"/></linearGradient>

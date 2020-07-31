@@ -18,11 +18,18 @@
 	outline: none;
 }
 
+:host([interactive][focused]) .ui5-icon-root {
+	outline: 1px dotted var(--sapContent_FocusColor);
+}
+
 :host(:not([dir="ltr"])) .ui5-icon-root[dir=rtl] {
 	transform: scale(-1, -1);
+	transform-origin: center;
 }
 
 .ui5-icon-root {
 	display:flex;
 	transform: scale(1, -1);
+	transform-origin: center;
+	outline: none;
 }

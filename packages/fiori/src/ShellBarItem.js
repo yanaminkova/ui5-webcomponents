@@ -40,17 +40,26 @@ const metadata = {
 		count: {
 			type: String,
 		},
+
+		/**
+		 * Defines the stable selector that you can use via getStableDomRef method.
+		 * @public
+		 * @since 1.0.0-rc.8
+		 */
+		stableDomRef: {
+			type: String,
+		},
 	},
 
 	events: /** @lends sap.ui.webcomponents.fiori.ShellBarItem.prototype */ {
 		/**
 		 * Fired, when the item is pressed.
 		 *
-		 * @event
+		 * @event sap.ui.webcomponents.fiori.ShellBarItem#item-click
 		 * @param {HTMLElement} targetRef dom ref of the clicked element
 		 * @public
 		 */
-		itemClick: {
+		"item-click": {
 			detail: {
 				targetRef: { type: HTMLElement },
 			},

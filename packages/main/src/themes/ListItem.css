@@ -52,6 +52,10 @@
 	color: var(--sapNegativeTextColor);
 }
 
+:host([info-state="Information"]) .ui5-li-info {
+	color: var(--sapInformativeTextColor);
+}
+
 /* ui5-li: item with title and description */
 :host([has-title][description]) {
 	height: 5rem;
@@ -131,7 +135,7 @@
 	flex-shrink: 0;
 }
 
-:host() ui5-checkbox.ui5-li-singlesel-radiobtn {
+:host ui5-checkbox.ui5-li-singlesel-radiobtn {
 	margin-right: var(--_ui5_list_item_cb_margin_right);
 }
 

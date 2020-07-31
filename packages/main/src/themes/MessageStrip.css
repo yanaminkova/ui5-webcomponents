@@ -87,7 +87,7 @@
 	align-items: center;
 	width: var(--_ui5_messagestrip_close_button_size);
 	height: var(--_ui5_messagestrip_close_button_size);
-	border-radius: 0.2rem;
+	border-radius: 0.25rem;
 	background: transparent;
 	color: var(--sapTextColor);
 	cursor: pointer;
@@ -95,7 +95,7 @@
 	right: 0.125rem;
 	top: 0.125rem;
 	outline: none;
-	border: none;
+	border: var(--_ui5_messagestrip_close_button_border);
 	-webkit-user-select: none;
 	-ms-user-select: none;
 	user-select: none;
@@ -121,7 +121,7 @@
 }
 
 .ui5-messagestrip-close-icon-wrapper:focus {
-	outline-offset: -2px;
+	outline-offset: var(--_ui5_messagestrip_focus_offset);
 	outline: var(--_ui5_messagestrip_focus_width) dotted var(--sapContent_FocusColor);
 }
 
@@ -132,4 +132,30 @@
 /* FF renders outine around element content, causing double outline - around the button and the icon */
 .ui5-messagestrip-close-icon-wrapper::-moz-focus-inner {
 	border: none;
+}
+
+/* RTL */
+.ui5-messagestrip-root[dir="rtl"] {
+	padding-right: 2.5rem;
+	padding-left: 2rem;
+}
+
+[dir="rtl"] .ui5-messagestrip-icon-wrapper {
+	right: 0.75rem;
+	left: 0;
+}
+
+[dir="rtl"] .ui5-messagestrip-icon--hidden {
+	padding-right: 1rem;
+	padding-left: 2rem;
+}
+
+[dir="rtl"] .ui5-messagestrip-close-icon--hidden {
+	padding-left: 1rem;
+	padding-right: 0;
+}
+
+[dir="rtl"] .ui5-messagestrip-close-icon-wrapper {
+	left: 0.125rem;
+	right: auto;
 }

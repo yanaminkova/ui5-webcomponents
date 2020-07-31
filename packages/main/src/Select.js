@@ -7,9 +7,10 @@ import {
 	isEnter,
 	isEscape,
 	isShow,
+	isTabNext,
+	isTabPrevious,
 } from "@ui5/webcomponents-base/dist/Keys.js";
 import { getFeature } from "@ui5/webcomponents-base/dist/FeaturesRegistry.js";
-import { getRTL } from "@ui5/webcomponents-base/dist/config/RTL.js";
 import ValueState from "@ui5/webcomponents-base/dist/types/ValueState.js";
 import "@ui5/webcomponents-icons/dist/icons/slim-arrow-down.js";
 import { getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
@@ -41,6 +42,7 @@ import ResponsivePopoverCommonCss from "./generated/themes/ResponsivePopoverComm
  */
 const metadata = {
 	tag: "ui5-select",
+	languageAware: true,
 	managedSlots: true,
 	slots: /** @lends sap.ui.webcomponents.main.Select.prototype */ {
 
@@ -322,7 +324,14 @@ class Select extends UI5Element {
 	}
 
 	_onkeydown(event) {
+		const isTab = (isTabNext(event) || isTabPrevious(event));
+
+		if (isTab && this.responsivePopover && this.responsivePopover.opened) {
+			this.responsivePopover.close();
+		}
+
 		if (isShow(event)) {
+			event.preventDefault();
 			this._toggleRespPopover();
 		}
 
@@ -351,11 +360,26 @@ class Select extends UI5Element {
 		this.options[index].selected = true;
 	}
 
-	_selectionChange(event) {
-		const selectedItemIndex = this._getSelectedItemIndex(event.detail.item);
-
+	/**
+	 * The user clicked on an item from the list
+	 * @private
+	 */
+	_handleItemPress(event) {
+		const item = event.detail.item;
+		const selectedItemIndex = this._getSelectedItemIndex(item);
 		this._select(selectedItemIndex);
+
 		this._toggleRespPopover();
+	}
+
+	/**
+	 * The user used arrow up/down on the list
+	 * @private
+	 */
+	_handleSelectionChange(event) {
+		const item = event.detail.selectedItems[0];
+		const selectedItemIndex = this._getSelectedItemIndex(item);
+		this._select(selectedItemIndex);
 	}
 
 	_applyFocusAfterOpen() {
@@ -370,7 +394,13 @@ class Select extends UI5Element {
 	}
 
 	_handlePickerKeydown(event) {
-		this._handleArrowNavigation(event, false);
+		if (isEscape(event) && this._isPickerOpen) {
+			this._escapePressed = true;
+		}
+
+		if (isEnter(event) || isSpace(event)) {
+			this._shouldClosePopover = true;
+		}
 	}
 
 	_handleArrowNavigation(event, shouldFireEvent) {
@@ -391,16 +421,8 @@ class Select extends UI5Element {
 			this._selectedIndex = nextIndex === -1 ? this._selectedIndex : nextIndex;
 
 			if (shouldFireEvent) {
-				this.fireEvent("change", { selectedOption: this.options[nextIndex] });
+				this._fireChangeEvent(this.options[nextIndex]);
 			}
-		}
-
-		if (isEscape(event)) {
-			this._escapePressed = true;
-		}
-
-		if (isEnter(event) || isSpace(event)) {
-			this._shouldClosePopover = true;
 		}
 	}
 
@@ -424,9 +446,17 @@ class Select extends UI5Element {
 			this._select(this._selectedIndexBeforeOpen);
 			this._escapePressed = false;
 		} else if (this._lastSelectedOption !== this.options[this._selectedIndex]) {
-			this.fireEvent("change", { selectedOption: this.options[this._selectedIndex] });
+			this._fireChangeEvent(this.options[this._selectedIndex]);
 			this._lastSelectedOption = this.options[this._selectedIndex];
 		}
+	}
+
+	_fireChangeEvent(selectedOption) {
+		this.fireEvent("change", { selectedOption });
+
+		//  Angular two way data binding
+		this.selectedItem = selectedOption;
+		this.fireEvent("selected-item-changed");
 	}
 
 	get valueStateTextMappings() {
@@ -469,11 +499,9 @@ class Select extends UI5Element {
 	}
 
 	get tabIndex() {
-		return this.disabled ? "-1" : "0";
-	}
-
-	get dir() {
-		return getRTL() ? "rtl" : "ltr";
+		return this.disabled
+		&& this.responsivePopover // Handles focus on Tab/Shift + Tab when the popover is opened
+		&& this.responsivePopover.opened ? "-1" : "0";
 	}
 
 	static async onDefine() {

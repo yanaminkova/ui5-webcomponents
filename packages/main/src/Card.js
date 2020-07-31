@@ -2,7 +2,6 @@ import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
 import litRender from "@ui5/webcomponents-base/dist/renderer/LitRenderer.js";
 import { fetchI18nBundle, getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import { isSpace, isEnter } from "@ui5/webcomponents-base/dist/Keys.js";
-import { getRTL } from "@ui5/webcomponents-base/dist/config/RTL.js";
 import CardTemplate from "./generated/templates/CardTemplate.lit.js";
 import Icon from "./Icon.js";
 
@@ -22,6 +21,7 @@ import cardCss from "./generated/themes/Card.css.js";
  */
 const metadata = {
 	tag: "ui5-card",
+	languageAware: true,
 	managedSlots: true,
 	slots: /** @lends sap.ui.webcomponents.main.Card.prototype */ {
 
@@ -50,6 +50,20 @@ const metadata = {
 		avatar: {
 			type: HTMLElement,
 		},
+
+		/**
+		 * Defines an action, displayed in the right most part of the header.
+		 * <br><br>
+		 * <b>Note:</b> If set, the <code>status</code> text will not be displayed,
+		 * you can either have <code>action</code>, or <code>status</code>.
+		 * @type {HTMLElement[]}
+		 * @slot
+		 * @public
+		 * @since 1.0.0-rc.8
+		 */
+		action: {
+			type: HTMLElement,
+		},
 	},
 	properties: /** @lends sap.ui.webcomponents.main.Card.prototype */ {
 
@@ -75,6 +89,9 @@ const metadata = {
 
 		/**
 		 * Defines the status displayed in the <code>ui5-card</code> header.
+		 * <br><br>
+		 * <b>Note:</b> If the <code>action</code> slot is set, the <code>status</code> will not be displayed,
+		 * you can either have <code>action</code>, or <code>status</code>.
 		 * @type {string}
 		 * @defaultvalue ""
 		 * @public
@@ -106,11 +123,11 @@ const metadata = {
 		 * by mouse/tap or by using the Enter or Space key.
 		 * <br><br>
 		 * <b>Note:</b> The event would be fired only if the <code>headerInteractive</code> property is set to true.
-		 * @event
+		 * @event sap.ui.webcomponents.main.Card#header-click
 		 * @public
 		 * @since 0.10.0
 		 */
-		headerClick: {},
+		"header-click": {},
 	},
 };
 
@@ -121,10 +138,8 @@ const metadata = {
  * The <code>ui5-card</code> is a component that represents information in the form of a
  * tile with separate header and content areas.
  * The content area of a <code>ui5-card</code> can be arbitrary HTML content.
- * The header can be used through several properties, such as:
- * <code>heading</code>, <code>subheading</code>, <code>status</code>
- * and a slot:
- * <code>avatar</code>.
+ * The header can be used through several properties, such as: <code>heading</code>, <code>subheading</code>, <code>status</code>
+ * and two slots: <code>avatar</code> and <code>action</code>.
  *
  * <h3>Keyboard handling</h3>
  * In case you enable <code>headerInteractive</code> property, you can press the <code>ui5-card</code> header by Space and Enter keys.
@@ -194,11 +209,7 @@ class Card extends UI5Element {
 	}
 
 	get hasHeader() {
-		return !!(this.heading || this.subheading || this.status || this.avatar);
-	}
-
-	get rtl() {
-		return getRTL() ? "rtl" : undefined;
+		return !!(this.heading || this.subheading || this.status || this.hasAction || this.avatar);
 	}
 
 	get ariaCardRoleDescription() {
@@ -221,6 +232,10 @@ class Card extends UI5Element {
 		return !!this.avatar.length;
 	}
 
+	get hasAction() {
+		return !!this.action.length;
+	}
+
 	static async onDefine() {
 		await Promise.all([
 			Icon.define(),
@@ -230,7 +245,7 @@ class Card extends UI5Element {
 
 	_headerClick() {
 		if (this.headerInteractive) {
-			this.fireEvent("headerClick");
+			this.fireEvent("header-click");
 		}
 	}
 
@@ -245,7 +260,7 @@ class Card extends UI5Element {
 		this._headerActive = enter || space;
 
 		if (enter) {
-			this.fireEvent("headerClick");
+			this.fireEvent("header-click");
 			return;
 		}
 
@@ -264,7 +279,7 @@ class Card extends UI5Element {
 		this._headerActive = false;
 
 		if (space) {
-			this.fireEvent("headerClick");
+			this.fireEvent("header-click");
 		}
 	}
 }

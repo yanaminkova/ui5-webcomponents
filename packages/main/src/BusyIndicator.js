@@ -1,5 +1,6 @@
 import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
 import litRender from "@ui5/webcomponents-base/dist/renderer/LitRenderer.js";
+import { isIE } from "@ui5/webcomponents-base/dist/Device.js";
 import { fetchI18nBundle, getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import BusyIndicatorSize from "./types/BusyIndicatorSize.js";
 import Label from "./Label.js";
@@ -17,6 +18,7 @@ import busyIndicatorCss from "./generated/themes/BusyIndicator.css.js";
  */
 const metadata = {
 	tag: "ui5-busyindicator",
+	languageAware: true,
 	slots: /** @lends sap.ui.webcomponents.main.BusyIndicator.prototype */ {
 
 		/**
@@ -52,7 +54,10 @@ const metadata = {
 		 * @defaultvalue "Medium"
 		 * @public
 		 */
-		size: { type: BusyIndicatorSize, defaultValue: BusyIndicatorSize.Medium },
+		size: {
+			type: BusyIndicatorSize,
+			defaultValue: BusyIndicatorSize.Medium,
+		},
 
 		/**
 		 * Defines if the busy indicator is visible on the screen. By default it is not.
@@ -61,7 +66,9 @@ const metadata = {
 		 * @defaultvalue false
 		 * @public
 		 */
-		active: { type: Boolean },
+		active: {
+			type: Boolean,
+		},
 	},
 };
 
@@ -77,6 +84,11 @@ const metadata = {
  * <h3>Usage</h3>
  * For the <code>ui5-busyindicator</code> you can define the size of the indicator, as well
  * as whether it is shown or hidden. In order to hide it, use the html attribute <code>hidden</code> or <code>display: none;</code>
+ * <br><br>
+ * In order to show busy state for an HTML element, simply nest the HTML element in a <code>ui5-busyindicator</code> instance.
+ * <br>
+ * <b>Note:</b> Since <code>ui5-busyindicator</code> has <code>display: inline-block;</code> by default and no width of its own,
+ * whenever you need to wrap a block-level element, you should set <code>display: block</code> to the busy indicator as well.
  *
  * <h3>ES6 Module Import</h3>
  *
@@ -95,6 +107,30 @@ class BusyIndicator extends UI5Element {
 		super();
 
 		this.i18nBundle = getI18nBundle("@ui5/webcomponents");
+		this._preventHandler = this._preventEvent.bind(this);
+	}
+
+	onBeforeRendering() {
+		if (this.active) {
+			this.tabIndex = -1;
+		} else {
+			this.removeAttribute("tabindex");
+		}
+	}
+
+	onEnterDOM() {
+		this.addEventListener("keyup", this._preventHandler, {
+			capture: true,
+		});
+
+		this.addEventListener("keydown", this._preventHandler, {
+			capture: true,
+		});
+	}
+
+	onExitDOM() {
+		this.removeEventListener("keyup", this._preventHandler, true);
+		this.removeEventListener("keydown", this._preventHandler, true);
 	}
 
 	static get metadata() {
@@ -122,6 +158,21 @@ class BusyIndicator extends UI5Element {
 
 	get ariaTitle() {
 		return this.i18nBundle.getText(BUSY_INDICATOR_TITLE);
+	}
+
+	get classes() {
+		return {
+			root: {
+				"ui5-busyindicator-root": true,
+				"ui5-busyindicator-root--ie": isIE(),
+			},
+		};
+	}
+
+	_preventEvent(event) {
+		if (this.active) {
+			event.stopImmediatePropagation();
+		}
 	}
 }
 

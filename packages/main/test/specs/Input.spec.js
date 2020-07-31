@@ -29,6 +29,7 @@ describe("Attributes propagation", () => {
 	it("Type attribute is propagated properly", () => {
 		const sExpectedType = "number";
 		assert.strictEqual(browser.$("#input-number").shadow$(".ui5-input-inner").getAttribute("type"), sExpectedType, "Type property was propagated");
+		assert.strictEqual(browser.$("#input-number").shadow$(".ui5-input-inner").getAttribute("step"), "any", "The step attr is set");
 	});
 
 	it("Value attribute is propagated properly", () => {
@@ -128,6 +129,34 @@ describe("Input general interaction", () => {
 		assert.strictEqual(inputChangeResult.getValue(), "2", "change is called twice");
 	});
 
+	it("fires suggestion-scroll event", () => {
+		const input = $("#scrollInput").shadow$("input");
+		const scrollResult = $("#scrollResult");
+
+		// act - open suggestions
+		input.click();
+		input.keys("a");
+
+		// act - scroll with keyboard
+		input.keys("ArrowUp");
+		input.keys("ArrowUp");
+		input.keys("ArrowUp");
+
+		// assert
+		const scrollTop = scrollResult.getProperty("value");
+		assert.ok(scrollTop > 0, "The suggestion-scroll event fired");
+
+		// assert isSuggestionsScrollable
+		const suggestionsScrollable = browser.execute(async () => {
+			const input = document.getElementById("scrollInput");
+			return (await input.isSuggestionsScrollable());
+		});
+		assert.equal(suggestionsScrollable, true, "The suggestions popup is scrolalble");
+
+		// close suggestions
+		input.keys("Enter"); 
+	});
+
 	it("handles suggestions", () => {
 		browser.url("http://localhost:8080/test-resources/pages/Input.html");
 
@@ -175,14 +204,15 @@ describe("Input general interaction", () => {
 		assert.strictEqual(suggestionsInput.getValue(), "Cozy", "First item has been selected");
 		assert.strictEqual(inputResult.getValue(), "1", "suggestionItemSelected event called once");
 
-		suggestionsInput.keys("c"); // to open the suggestions pop up once again 
+		suggestionsInput.keys("c"); // to open the suggestions pop up once again
 		suggestionsInput.keys("ArrowUp");
 
-		assert.strictEqual(suggestionsInput.getValue(), "Condensed", "First item has been selected");
+		assert.strictEqual(suggestionsInput.getValue(), "",
+			"The Last item 'Inactive Condensed' has been selected, producing empty string as 'Inactive'");
 
 		inputResult.click();
 
-		assert.strictEqual(inputResult.getValue(), "1", "suggestionItemSelect is fired once");
+		assert.strictEqual(inputResult.getValue(), "1", "suggestionItemSelect is not fired as item is 'Inactive'");
 	});
 
 	it("handles group suggestion item via keyboard", () => {
@@ -196,6 +226,17 @@ describe("Input general interaction", () => {
 		assert.strictEqual(suggestionsInput.getValue(), "", "Group item is not selected");
 		assert.strictEqual(inputResult.getValue(), "", "suggestionItemSelected event is not called");
 	});
+
+	it("checks if the suggestions popover width is the same as the input width when there is a long suggestion", () => {
+		const input = $("#suggestionsPopoverWidth");
+		const nativeInput = $("#suggestionsPopoverWidth").shadow$("input");
+		const staticAreaItemClassName = browser.getStaticAreaItemClassName("#suggestionsPopoverWidth");
+		const listItem = browser.$(`.${staticAreaItemClassName}`).shadow$("ui5-responsive-popover").$("ui5-li-suggestion-item");
+
+		nativeInput.click();
+
+		assert.strictEqual(input.getSize('width'), listItem.getSize('width'));
+	})
 
 	it("Input's maxlength property is set correctly", () => {
 		const input5 = $("#input-tel");
@@ -219,11 +260,67 @@ describe("Input general interaction", () => {
 		const respPopover = browser.$(`.${staticAreaItemClassName}`).shadow$("ui5-responsive-popover .ui5-responsive-popover-header");
 
 		inputShadowRef.click();
-		
+
 		assert.ok(popover.getProperty("opened"), "Popover with valueStateMessage should be opened.");
 
 		inputShadowRef.keys("a");
 
 		assert.ok(respPopover, "Responsive popover with valueStateMessage should be opened.");
+	});
+
+	it("Checks if aria-label is reflected in the shadow DOM", () => {
+		const input = browser.$("#aria-label-input");
+		const innerInput = input.shadow$("input");
+		const NEW_TEXT = "New cool text";
+
+		assert.strictEqual(input.getAttribute("aria-label"), innerInput.getAttribute("aria-label"), "aria-label is reflected in the shadow DOM")
+
+		input.setAttribute("aria-label", NEW_TEXT);
+
+		assert.strictEqual(innerInput.getAttribute("aria-label"), NEW_TEXT, "aria-label is reflected in the shadow DOM")
+	});
+
+	it("Tests suggestions highlighting", () => {
+		const input = browser.$("#myInputHighlighted").shadow$("input");
+		const staticAreaItemClassName = browser.getStaticAreaItemClassName("#myInputHighlighted");
+		const EXPTECTED_TEXT = "<b>Ad</b>am";
+
+		input.click();
+		input.keys("ad");
+
+		const respPopover = browser.$(`.${staticAreaItemClassName}`).shadow$("ui5-responsive-popover");
+		const firstListItem = respPopover.$("ui5-list").$("ui5-li-suggestion-item");
+
+		assert.ok(respPopover.isDisplayedInViewport(), "The popover is visible");
+		assert.ok(firstListItem.getHTML().indexOf(EXPTECTED_TEXT) !== -1, "The suggestions is highlighted.")
+	});
+
+	it("fires suggestion-item-preview", () => {
+		browser.url("http://localhost:8080/test-resources/pages/Input_quickview.html");
+
+		const inputItemPreview = $("#inputPreview2").shadow$("input");
+		const suggestionItemPreviewRes = $("#suggestionItemPreviewRes");
+		const EXPECTED_PREVIEW_ITEM_TEXT = "Laptop Lenovo";
+
+		// act
+		inputItemPreview.click();
+		inputItemPreview.keys("ArrowDown");
+		
+		// assert
+		const staticAreaItemClassName = browser.getStaticAreaItemClassName("#inputPreview2");
+		const inputPopover = browser.$(`.${staticAreaItemClassName}`).shadow$("ui5-responsive-popover");
+		const helpPopover = browser.$("#quickViewCard2");
+
+		assert.strictEqual(suggestionItemPreviewRes.getValue(), EXPECTED_PREVIEW_ITEM_TEXT, "First item has been previewed");
+		assert.ok(helpPopover.isDisplayedInViewport(), "The help popover is open.");
+		assert.ok(inputPopover.isDisplayedInViewport(), "The input popover is open.");
+
+		// act
+		const inputInHelpPopover = browser.$("#searchInput2").shadow$("input");
+		inputInHelpPopover.click();
+
+		// assert
+		assert.notOk(inputPopover.isDisplayedInViewport(), "The inpuit popover is closed as it lost the focus.");
+		assert.ok(helpPopover.isDisplayedInViewport(), "The help popover remains open as the focus is within.");
 	});
 });

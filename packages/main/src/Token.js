@@ -1,7 +1,6 @@
 import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
 import litRender from "@ui5/webcomponents-base/dist/renderer/LitRenderer.js";
 import { getTheme } from "@ui5/webcomponents-base/dist/config/Theme.js";
-import { getRTL } from "@ui5/webcomponents-base/dist/config/RTL.js";
 import {
 	isBackSpace,
 	isEnter,
@@ -24,6 +23,7 @@ import styles from "./generated/themes/Token.css.js";
  */
 const metadata = {
 	tag: "ui5-token",
+	languageAware: true,
 	slots: /** @lends sap.ui.webcomponents.main.Token.prototype */ {
 		/**
 		 * Defines the text of the <code>ui5-token</code>.
@@ -131,6 +131,7 @@ class Token extends UI5Element {
 
 	_select() {
 		this.fireEvent("select");
+		this.selected = true;
 	 }
 
 	 _delete() {
@@ -152,15 +153,12 @@ class Token extends UI5Element {
 
 		if (isEnter(event) || isSpace(event)) {
 			this.fireEvent("select", {});
+			this.selected = true;
 		}
 	}
 
 	get tokenDeletableText() {
 		return this.i18nBundle.getText(TOKEN_ARIA_DELETABLE);
-	}
-
-	get dir() {
-		return getRTL() ? "rtl" : "ltr";
 	}
 
 	get iconURI() {
