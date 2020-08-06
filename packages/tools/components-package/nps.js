@@ -1,35 +1,41 @@
+const fs = require("fs");
 const path = require("path");
 
+const version = JSON.parse(fs.readFileSync("package.json")).version;
 const LIB = path.join(__dirname, `../lib/`);
 const serveConfig = path.join(__dirname, `serve.json`);
 const polyfillDir = path.dirname(require.resolve("@webcomponents/webcomponentsjs"));
 const polyfillPath = path.join(polyfillDir, "/**/*.*");
+
+const scoped = true;
+const DIST = scoped ? "dist/scoped" : "dist";
+const SCOPE = scoped ? version : "";
 
 const getScripts = (options) => {
 
 	const port = options.port;
 
 	const scripts = {
-		clean: "rimraf dist",
+		clean: `rimraf ${DIST}`,
 		lint: "eslint . --config config/.eslintrc.js",
 		prepare: "nps clean build.templates build.styles build.i18n build.jsonImports copy build.samples",
 		build: {
 			default: "nps lint prepare build.bundle",
-			templates: `mkdirp dist/generated/templates && node "${LIB}/hbs2ui5/index.js" -d src/ -o dist/generated/templates`,
+			templates: `mkdirp ${DIST}/generated/templates && node "${LIB}/hbs2ui5/index.js" -d src/ -o ${DIST}/generated/templates -s ${SCOPE}`,
 			styles: {
 				default: "nps build.styles.themes build.styles.components",
-				themes: "postcss src/**/parameters-bundle.css --config config/postcss.themes --base src --dir dist/css/",
-				components: "postcss src/themes/*.css --config config/postcss.components --base src --dir dist/css/",
+				themes: `postcss src/**/parameters-bundle.css --config config/postcss.themes --base src --dir ${DIST}/css/`,
+				components: `postcss src/themes/*.css --config config/postcss.components --base src --dir ${DIST}/css/`,
 			},
 			i18n: {
 				default: "nps build.i18n.defaultsjs build.i18n.json",
-				defaultsjs: `node "${LIB}/i18n/defaults.js" src/i18n dist/generated/i18n`,
-				json: `node "${LIB}/i18n/toJSON.js" src/i18n dist/generated/assets/i18n`,
+				defaultsjs: `node "${LIB}/i18n/defaults.js" src/i18n ${DIST}/generated/i18n`,
+				json: `node "${LIB}/i18n/toJSON.js" src/i18n ${DIST}/generated/assets/i18n`,
 			},
 			jsonImports: {
-				default: "mkdirp dist/generated/json-imports && nps build.jsonImports.themes build.jsonImports.i18n",
-				themes: `node "${LIB}/generate-json-imports/themes.js" dist/generated/assets/themes dist/generated/json-imports`,
-				i18n: `node "${LIB}/generate-json-imports/i18n.js" dist/generated/assets/i18n dist/generated/json-imports`,
+				default: `mkdirp ${DIST}/generated/json-imports && nps build.jsonImports.themes build.jsonImports.i18n`,
+				themes: `node "${LIB}/generate-json-imports/themes.js" ${DIST}/generated/assets/themes ${DIST}/generated/json-imports`,
+				i18n: `node "${LIB}/generate-json-imports/i18n.js" ${DIST}/generated/assets/i18n ${DIST}/generated/json-imports`,
 			},
 			bundle: "rollup --config config/rollup.config.js --environment ES5_BUILD",
 			samples: {
@@ -40,7 +46,7 @@ const getScripts = (options) => {
 		},
 		copy: {
 			default: "nps copy.src copy.test copy.webcomponents-polyfill",
-			src: `node "${LIB}/copy-and-watch/index.js" "src/**/*.js" dist/`,
+			src: `node "${LIB}/copy-and-watch/index.js" "src/**/*.js" ${DIST}/`,
 			test: `node "${LIB}/copy-and-watch/index.js" "test/**/*.*" dist/test-resources`,
 			"webcomponents-polyfill": `node "${LIB}/copy-and-watch/index.js" "${polyfillPath}" dist/webcomponentsjs/`,
 		},
@@ -61,7 +67,7 @@ const getScripts = (options) => {
 		start: "nps prepare dev",
 		serve: {
 			default: "nps serve.prepare serve.run",
-			prepare: `node "${LIB}/copy-and-watch/index.js" "${serveConfig}" dist/`,
+			prepare: `node "${LIB}/copy-and-watch/index.js" "${serveConfig}" dist`,
 			run: `serve --no-clipboard -l ${port} dist`,
 		},
 		test: {

@@ -5,6 +5,12 @@ const fs = require("fs");
 
 const packageName = JSON.parse(fs.readFileSync("./package.json")).name;
 
+const scoped = process.argv[process.argv.length - 1].includes("scoped");
+
+const toReplace = "src";
+const replaceWith = scoped ? "dist/scoped" : "dist";
+
+
 module.exports = {
 	plugins: [
 		postcssImport(),
@@ -16,6 +22,6 @@ module.exports = {
 				},
 			]
 		}),
-		postcssCSStoESM({toReplace: 'src', includeDefaultTheme: true, packageName}),
+		postcssCSStoESM({toReplace, replaceWith, includeDefaultTheme: true, packageName}),
 	]
 };

@@ -9,7 +9,8 @@ const args = getopts(process.argv.slice(2), {
 		o: 'output',
 		d: 'directory',
 		f: 'file',
-		t: 'type'
+		t: 'type',
+		s: 'scope'
 	},
 	default: {
 		t: 'lit-html'
@@ -22,16 +23,16 @@ const onError = (place) => {
 
 const isHandlebars = (fileName) => fileName.indexOf('.hbs') !== -1;
 
-const processFile = (file, outputDir) => {
+const processFile = (file, outputDir, scope) => {
 
-	const litCode = hbs2lit(file);
+	const litCode = hbs2lit(file, scope);
 
 	const componentNameMatcher = /(\w+)(\.hbs)/gim;
 	const componentName = componentNameMatcher.exec(file)[1];
 	writeRenderers(outputDir, componentName, litRenderer.generateTemplate(componentName, litCode));
 };
 
-const wrapDirectory = (directory, outputDir) => {
+const wrapDirectory = (directory, outputDir, scope) => {
 	directory = path.normalize(directory);
 	outputDir = path.normalize(outputDir);
 
@@ -43,7 +44,7 @@ const wrapDirectory = (directory, outputDir) => {
 
 		files.forEach(fileName => {
 			if (isHandlebars(fileName)) {
-				processFile(path.join(directory, fileName), outputDir);
+				processFile(path.join(directory, fileName), outputDir, scope);
 			}
 		});
 	})
@@ -66,5 +67,5 @@ const writeRenderers = (outputDir, controlName, fileContent) => {
 if (!args['d'] || !args['o']) {
 	console.log('Please provide an input and output directory (-d and -o)');
 } else {
-	wrapDirectory(args['d'], args['o']);
+	wrapDirectory(args['d'], args['o'], args.s);
 }

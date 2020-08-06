@@ -4,6 +4,11 @@ const postcssCSStoJSON = require('../lib/postcss-css-to-json/index.js');
 const postcssCSStoESM = require('../lib/postcss-css-to-esm/index.js');
 const cssnano = require('cssnano');
 
+const scoped = process.argv[process.argv.length - 1].includes("scoped");
+
+const toReplace = "src";
+const replaceWith = scoped ? "dist/scoped" : "dist";
+
 module.exports = {
 	plugins: [
 		postcssImport(),
@@ -17,7 +22,7 @@ module.exports = {
 				},
 			]
 		},),
-		postcssCSStoJSON({toReplace: 'src'}),
-		postcssCSStoESM({toReplace: 'src'}),
+		postcssCSStoJSON({toReplace, replaceWith}),
+		postcssCSStoESM({toReplace, replaceWith}),
 	]
 };

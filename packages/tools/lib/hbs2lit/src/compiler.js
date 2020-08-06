@@ -12,10 +12,17 @@ const removeWhiteSpaces = (source) => {
 		.replace(/}}\s+{{/g, "}}{{"); // Remove whitespace between }} and {{
 };
 
-const hbs2lit = (file) => {
+const replaceTags = (source, scope) => {
+	return source.replace(/(<\/?[a-zA-Z0-9\-]+?)-([a-zA-Z0-9]+?)([> ])/g, `$1-$2-${scope}$3`);
+};
+
+const hbs2lit = (file, scope) => {
 	let sPreprocessed = includesReplacer.replace(file);
 
 	sPreprocessed = removeWhiteSpaces(sPreprocessed);
+	if (scope) {
+		sPreprocessed = replaceTags(sPreprocessed, scope);
+	}
 
 	const ast = Handlebars.parse(sPreprocessed);
 

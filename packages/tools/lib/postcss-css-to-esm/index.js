@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const mkdirp = require('mkdirp');
 const assets = require("../../assets-meta.js");
+const slash = require('slash');
 
 const DEFAULT_THEME = assets.themes.default;
 
@@ -23,7 +24,7 @@ const proccessCSS = css => {
 	css = css.replace(/\.sapContrast[ ]*:root[\s\S]*?}/, "");
 	css = css.replace(/--sapFontUrl.*\);?/, "");
 	return JSON.stringify(css);
-}
+};
 
 module.exports = postcss.plugin('add css to esm transform plugin', function (opts) {
 	opts = opts || {};
@@ -32,7 +33,7 @@ module.exports = postcss.plugin('add css to esm transform plugin', function (opt
 		let css = root.toString();
 		css = proccessCSS(css);
 
-		const targetFile = root.source.input.from.replace(`/${opts.toReplace}/`, "/dist/generated/").replace(`\\${opts.toReplace}\\`, "\\dist\\generated\\");
+		const targetFile = slash(root.source.input.from).replace(`/${opts.toReplace}/`, `/${opts.replaceWith}/generated/`);
 		mkdirp.sync(path.dirname(targetFile));
 
 		const filePath = `${targetFile}.js`;
