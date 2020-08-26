@@ -298,8 +298,8 @@ describe("Select general interaction", () => {
 	it("Tests aria-label and aria-labelledby", () => {
 		const select1 = browser.$("#textAreaAriaLabel").shadow$(".ui5-select-root");
 		const select2 = browser.$("#textAreaAriaLabelledBy").shadow$(".ui5-select-root");
-		const EXPECTED_ARIA_LABEL1 = "Hello World";
-		const EXPECTED_ARIA_LABEL2 = "info text";
+		const EXPECTED_ARIA_LABEL1 = "Third Hello World";
+		const EXPECTED_ARIA_LABEL2 = "Three info text";
 
 		assert.strictEqual(select1.getAttribute("aria-label"), EXPECTED_ARIA_LABEL1,
 			"The aria-label is correctly set internally.");

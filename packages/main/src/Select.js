@@ -603,7 +603,13 @@ class Select extends UI5Element {
 	}
 
 	get ariaLabelText() {
-		return getEffectiveAriaLabelText(this);
+		const externalAriaLabelText = getEffectiveAriaLabelText(this);
+
+		if (externalAriaLabelText) {
+			return `${this._text} ${externalAriaLabelText}`;
+		}
+
+		return this._text;
 	}
 
 	get valueStateMessageText() {
