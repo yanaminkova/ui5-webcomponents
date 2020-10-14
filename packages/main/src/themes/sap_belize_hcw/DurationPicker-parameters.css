@@ -1,0 +1,5 @@
+@import "../base/DurationPicker-parameters.css";
+
+:root {
+	--_ui5_duration_picker_icon_border: 0.0625rem solid var(--sapField_Hover_BorderColor);
+}

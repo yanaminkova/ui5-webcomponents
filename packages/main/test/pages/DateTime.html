@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>DateTime components test page</title>
+
+	<script>
+		delete Document.prototype.adoptedStyleSheets;
+	</script>
+
+	<script src="../../webcomponentsjs/webcomponents-loader.js"></script>
+	<script src="../../resources/bundle.esm.js" type="module"></script>
+	<script nomodule src="../../resources/bundle.es5.js"></script>
+
+	<script
+	src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+	integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E="
+	crossorigin="anonymous"></script>
+
+	<script data-id="sap-ui-config" type="application/json">
+		{
+			"rtl": false,
+			"formatSettings": {
+				"firstDayOfWeek": 0
+			}
+		}
+	</script>
+
+	<style>
+		.custom {
+			height: 80px;
+			width: 250px;
+			min-width: 100px;
+			color: #333;
+			background: rgb(240, 240, 238);
+			font-size: 1.125rem;
+			font-style: italic;
+			border: 1px solid rgb(176, 19, 184);
+		}
+
+		.custom[readonly] {
+			border: 3px solid rgb(0, 238, 234);
+		}
+
+		.custom[disabled] {
+			border: 3px solid rgb(0, 107, 201);
+		}
+
+		.custom[value-state="Error"] {
+			border: 2px solid rgb(247, 35, 49);
+		}
+
+		.custom[value-state="Warning"] {
+			border: 2px solid rgb(19, 223, 0);
+		}
+	</style>
+</head>
+<body style="background-color: var(--sapBackgroundColor);">
+		<h3>Standard</h3>
+		<section>
+			<ui5-date-picker></ui5-date-picker>
+			<ui5-datetime-picker></ui5-datetime-picker>
+			<ui5-daterange-picker></ui5-daterange-picker>
+			<ui5-time-picker></ui5-time-picker>
+			<ui5-duration-picker></ui5-duration-picker>
+		</section>
+
+		<br>
+		<br>
+
+		<h3>Custom</h3>
+		<section>
+			<ui5-date-picker class="custom"></ui5-date-picker>
+			<ui5-datetime-picker class="custom"></ui5-datetime-picker>
+			<ui5-daterange-picker class="custom"></ui5-daterange-picker>
+			<ui5-time-picker class="custom"></ui5-time-picker>
+			<ui5-duration-picker class="custom"></ui5-duration-picker>
+		</section>
+
+		<br>
+		<br>
+
+		<h3>Standard in State</h3>
+		<section>
+			<ui5-date-picker value-state="Error"></ui5-date-picker>
+			<ui5-date-picker value-state="Warning"></ui5-date-picker>
+			<ui5-date-picker value="Oct 13, 2020" readonly></ui5-date-picker>
+			<ui5-date-picker disabled></ui5-date-picker>
+			<br>
+			<br>
+			<ui5-datetime-picker value-state="Error"></ui5-datetime-picker>
+			<ui5-datetime-picker value-state="Warning"></ui5-datetime-picker>
+			<ui5-datetime-picker value="Oct 13, 2020" readonly></ui5-datetime-picker>
+			<ui5-datetime-picker disabled></ui5-datetime-picker>
+			<br>
+			<br>
+			<ui5-daterange-picker value-state="Error"></ui5-daterange-picker>
+			<ui5-daterange-picker value-state="Warning"></ui5-daterange-picker>
+			<ui5-daterange-picker readonly></ui5-daterange-picker>
+			<ui5-daterange-picker disabled></ui5-daterange-picker>
+			<br>
+			<br>
+			<ui5-time-picker value-state="Error"></ui5-time-picker>
+			<ui5-time-picker value-state="Warning"></ui5-time-picker>
+			<ui5-time-picker readonly></ui5-time-picker>
+			<ui5-time-picker disabled></ui5-time-picker>
+			<br>
+			<br>
+			<ui5-duration-picker value-state="Error"></ui5-duration-picker>
+			<ui5-duration-picker value-state="Warning"></ui5-duration-picker>
+			<ui5-duration-picker readonly></ui5-duration-picker>
+			<ui5-duration-picker disabled></ui5-duration-picker>
+		</section>
+
+		<br>
+		<br>
+
+		<h3>Custom in State</h3>
+		<section>
+			<ui5-date-picker class="custom" value-state="Error"></ui5-date-picker>
+			<ui5-date-picker class="custom" value-state="Warning"></ui5-date-picker>
+			<ui5-date-picker class="custom" readonly></ui5-date-picker>
+			<ui5-date-picker class="custom" disabled></ui5-date-picker>
+			<br>
+			<br>
+			<ui5-datetime-picker class="custom" value-state="Error"></ui5-datetime-picker>
+			<ui5-datetime-picker class="custom" value-state="Warning"></ui5-datetime-picker>
+			<ui5-datetime-picker class="custom" readonly></ui5-datetime-picker>
+			<ui5-datetime-picker class="custom" disabled></ui5-datetime-picker>
+			<br>
+			<br>
+			<ui5-daterange-picker class="custom" value-state="Error"></ui5-daterange-picker>
+			<ui5-daterange-picker class="custom" value-state="Warning"></ui5-daterange-picker>
+			<ui5-daterange-picker class="custom" readonly></ui5-daterange-picker>
+			<ui5-daterange-picker class="custom" disabled></ui5-daterange-picker>
+			<br>
+			<br>
+			<ui5-time-picker class="custom" value-state="Error"></ui5-time-picker>
+			<ui5-time-picker class="custom" value-state="Warning"></ui5-time-picker>
+			<ui5-time-picker class="custom" readonly></ui5-time-picker>
+			<ui5-time-picker class="custom" disabled></ui5-time-picker>
+			<br>
+			<br>
+			<ui5-duration-picker class="custom" value-state="Error"></ui5-duration-picker>
+			<ui5-duration-picker class="custom" value-state="Warning"></ui5-duration-picker>
+			<ui5-duration-picker class="custom" readonly></ui5-duration-picker>
+			<ui5-duration-picker class="custom" disabled></ui5-duration-picker>
+		</section>
+</body>
+</html>

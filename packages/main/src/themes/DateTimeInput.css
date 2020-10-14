@@ -1,0 +1,26 @@
+@import "./InputStates.css";
+
+:host {
+	height: var(--_ui5_input_height);
+	min-height: var(--_ui5_input_height);
+	color: var(--sapField_TextColor);
+	background-color: var(--sapField_Background);
+	font-size: var(--sapFontSize);
+	font-family: var(--sapFontFamily);
+	font-style: normal;
+	border-radius: var(--_ui5_input_wrapper_border_radius);
+	box-sizing: border-box;
+	border: 1px solid var(--sapField_BorderColor);
+}
+
+:host [date-time-input] {
+	width: 100%;
+	min-width: inherit;
+	height: inherit;
+	min-height: inherit;
+	color: inherit;
+	background-color: inherit;
+	font: inherit;
+	border-radius: inherit;
+	border: inherit;
+}

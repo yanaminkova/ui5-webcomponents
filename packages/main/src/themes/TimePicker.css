@@ -1,16 +1,11 @@
+@import "./DateTimeInput.css";
+
 :host(:not([hidden])) {
 	display: inline-block;
 }
 
-:host {
-	color: var(--sapField_TextColor);
-	background-color: var(--sapField_Background);
-}
-
-:host .ui5-time-picker-input {
-	width: 100%;
-	color: inherit;
-	background-color: inherit;
+.ui5-time-picker-root {
+	height: 100%;
 }
 
 .ui5-time-picker-input-icon-button {
