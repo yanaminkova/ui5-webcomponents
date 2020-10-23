@@ -242,22 +242,26 @@ class UploadCollectionItem extends ListItem {
 	}
 
 	static get styles() {
-		return [...ListItem.styles, UploadCollectionItemCss];
+		return [ListItem.styles, UploadCollectionItemCss];
 	}
 
 	static get template() {
 		return UploadCollectionItemTemplate;
 	}
 
+	static get dependencies() {
+		return [
+			...ListItem.dependencies,
+			Button,
+			Input,
+			Link,
+			Label,
+			ProgressIndicator,
+		];
+	}
+
 	static async onDefine() {
-		await Promise.all([
-			Button.define(),
-			Input.define(),
-			Link.define(),
-			Label.define(),
-			ProgressIndicator.define(),
-			fetchI18nBundle("@ui5/webcomponents-fiori"),
-		]);
+		await fetchI18nBundle("@ui5/webcomponents-fiori");
 	}
 
 	constructor() {

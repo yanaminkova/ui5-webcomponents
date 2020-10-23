@@ -10,9 +10,12 @@ import {
 	isTabNext,
 	isTabPrevious,
 } from "@ui5/webcomponents-base/dist/Keys.js";
+import Integer from "@ui5/webcomponents-base/dist/types/Integer.js";
 import { getFeature } from "@ui5/webcomponents-base/dist/FeaturesRegistry.js";
+import { getEffectiveAriaLabelText } from "@ui5/webcomponents-base/dist/util/AriaLabelHelper.js";
 import ValueState from "@ui5/webcomponents-base/dist/types/ValueState.js";
 import "@ui5/webcomponents-icons/dist/icons/slim-arrow-down.js";
+import { isPhone } from "@ui5/webcomponents-base/dist/Device.js";
 import { getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import "@ui5/webcomponents-icons/dist/icons/decline.js";
 import {
@@ -21,13 +24,16 @@ import {
 	VALUE_STATE_ERROR,
 	VALUE_STATE_WARNING,
 	INPUT_SUGGESTIONS_TITLE,
+	SELECT_ROLE_DESCRIPTION,
 } from "./generated/i18n/i18n-defaults.js";
 import Option from "./Option.js";
 import Label from "./Label.js";
 import ResponsivePopover from "./ResponsivePopover.js";
+import Popover from "./Popover.js";
 import List from "./List.js";
 import StandardListItem from "./StandardListItem.js";
 import Icon from "./Icon.js";
+import Button from "./Button.js";
 
 // Templates
 import SelectTemplate from "./generated/templates/SelectTemplate.lit.js";
@@ -36,6 +42,8 @@ import SelectPopoverTemplate from "./generated/templates/SelectPopoverTemplate.l
 // Styles
 import selectCss from "./generated/themes/Select.css.js";
 import ResponsivePopoverCommonCss from "./generated/themes/ResponsivePopoverCommon.css.js";
+import ValueStateMessageCss from "./generated/themes/ValueStateMessage.css.js";
+import SelectPopoverCss from "./generated/themes/SelectPopover.css.js";
 
 /**
  * @public
@@ -63,6 +71,23 @@ const metadata = {
 			propertyName: "options",
 			type: HTMLElement,
 			listenFor: { include: ["*"] },
+		},
+
+		/**
+		 * Defines the value state message that will be displayed as pop up under the <code>ui5-select</code>.
+		 * <br><br>
+		 *
+		 * <b>Note:</b> If not specified, a default text (in the respective language) will be displayed.
+		 * <br>
+		 * <b>Note:</b> The <code>valueStateMessage</code> would be displayed,
+		 * when the <code>ui5-select</code> is in <code>Information</code>, <code>Warning</code> or <code>Error</code> value state.
+		 * @type {HTMLElement[]}
+		 * @since 1.0.0-rc.9
+		 * @slot
+		 * @public
+		 */
+		valueStateMessage: {
+			type: HTMLElement,
 		},
 	},
 	properties: /** @lends  sap.ui.webcomponents.main.Select.prototype */  {
@@ -122,6 +147,43 @@ const metadata = {
 			defaultValue: ValueState.None,
 		},
 
+		/**
+		 * Defines whether the <code>ui5-select</code> is required.
+		 *
+		 * @since 1.0.0-rc.9
+		 * @type {Boolean}
+		 * @defaultvalue false
+		 * @public
+		 */
+		required: {
+			type: Boolean,
+		},
+
+		/**
+		 * Defines the aria-label attribute for the select.
+		 *
+		 * @type {String}
+		 * @since 1.0.0-rc.9
+		 * @private
+		 * @defaultvalue ""
+		 */
+		ariaLabel: {
+			type: String,
+		},
+
+		/**
+		 * Receives id(or many ids) of the elements that label the select.
+		 *
+		 * @type {String}
+		 * @defaultvalue ""
+		 * @private
+		 * @since 1.0.0-rc.9
+		 */
+		ariaLabelledby: {
+			type: String,
+			defaultValue: "",
+		},
+
 		_text: {
 			type: String,
 			noAttribute: true,
@@ -137,6 +199,12 @@ const metadata = {
 		 */
 		opened: {
 			type: Boolean,
+		},
+
+		_listWidth: {
+			type: Integer,
+			defaultValue: 0,
+			noAttribute: true,
 		},
 
 		/**
@@ -211,7 +279,7 @@ class Select extends UI5Element {
 	}
 
 	static get staticAreaStyles() {
-		return ResponsivePopoverCommonCss;
+		return [ResponsivePopoverCommonCss, ValueStateMessageCss, SelectPopoverCss];
 	}
 
 	constructor() {
@@ -230,6 +298,14 @@ class Select extends UI5Element {
 		this._enableFormSupport();
 	}
 
+	onAfterRendering() {
+		this.toggleValueStatePopover(this.shouldOpenValueStateMessagePopover);
+
+		if (this._isPickerOpen && !this._listWidth) {
+			this._listWidth = this.responsivePopover.offsetWidth;
+		}
+	}
+
 	_onfocusin() {
 		this.focused = true;
 	}
@@ -245,7 +321,7 @@ class Select extends UI5Element {
 	async _respPopover() {
 		this._iconPressed = true;
 		const staticAreaItem = await this.getStaticAreaItemDomRef();
-		return staticAreaItem.querySelector("ui5-responsive-popover");
+		return staticAreaItem.querySelector("[ui5-responsive-popover]");
 	}
 
 	/**
@@ -263,8 +339,6 @@ class Select extends UI5Element {
 		if (this.disabled) {
 			return;
 		}
-
-		this.updateStaticAreaItemContentDensity();
 
 		if (this._isPickerOpen) {
 			this.responsivePopover.close();
@@ -441,6 +515,7 @@ class Select extends UI5Element {
 
 	_afterClose() {
 		this._iconPressed = false;
+		this._listWidth = 0;
 
 		if (this._escapePressed) {
 			this._select(this._selectedIndexBeforeOpen);
@@ -486,6 +561,10 @@ class Select extends UI5Element {
 		return this.disabled || undefined;
 	}
 
+	get selectRoleDescription() {
+		return this.i18nBundle.getText(SELECT_ROLE_DESCRIPTION);
+	}
+
 	get _headerTitleText() {
 		return this.i18nBundle.getText(INPUT_SUGGESTIONS_TITLE);
 	}
@@ -500,19 +579,94 @@ class Select extends UI5Element {
 
 	get tabIndex() {
 		return this.disabled
-		&& this.responsivePopover // Handles focus on Tab/Shift + Tab when the popover is opened
-		&& this.responsivePopover.opened ? "-1" : "0";
+		|| (this.responsivePopover // Handles focus on Tab/Shift + Tab when the popover is opened
+		&& this.responsivePopover.opened) ? "-1" : "0";
 	}
 
-	static async onDefine() {
-		await Promise.all([
-			Option.define(),
-			Label.define(),
-			ResponsivePopover.define(),
-			List.define(),
-			StandardListItem.define(),
-			Icon.define(),
-		]);
+	get classes() {
+		return {
+			popoverValueState: {
+				"ui5-valuestatemessage-root": true,
+				"ui5-valuestatemessage--success": this.valueState === ValueState.Success,
+				"ui5-valuestatemessage--error": this.valueState === ValueState.Error,
+				"ui5-valuestatemessage--warning": this.valueState === ValueState.Warning,
+				"ui5-valuestatemessage--information": this.valueState === ValueState.Information,
+			},
+		};
+	}
+
+	get styles() {
+		return {
+			popoverHeader: {
+				"width": `${this.offsetWidth}px`,
+			},
+			responsivePopoverHeader: {
+				"display": this.options.length && this._listWidth === 0 ? "none" : "inline-block",
+				"width": `${this.options.length ? this._listWidth : this.offsetWidth}px`,
+			},
+		};
+	}
+
+	get ariaLabelText() {
+		return getEffectiveAriaLabelText(this);
+	}
+
+	get valueStateMessageText() {
+		return this.getSlottedNodes("valueStateMessage").map(el => el.cloneNode(true));
+	}
+
+	get shouldDisplayDefaultValueStateMessage() {
+		return !this.valueStateMessage.length && this.hasValueStateText;
+	}
+
+	get hasValueStateText() {
+		return this.hasValueState && this.valueState !== ValueState.Success;
+	}
+
+	get shouldOpenValueStateMessagePopover() {
+		return this.focused && this.hasValueStateText && !this._iconPressed
+			&& !this._isPickerOpen && !this._isPhone;
+	}
+
+	get _isPhone() {
+		return isPhone();
+	}
+
+	async openValueStatePopover() {
+		this.popover = await this._getPopover();
+		if (this.popover) {
+			this.popover.openBy(this);
+		}
+	}
+
+	closeValueStatePopover() {
+		this.popover && this.popover.close();
+	}
+
+	toggleValueStatePopover(open) {
+		if (open) {
+			this.openValueStatePopover();
+		} else {
+			this.closeValueStatePopover();
+		}
+	}
+
+	async _getPopover() {
+		const staticAreaItem = await this.getStaticAreaItemDomRef();
+		return staticAreaItem.querySelector("[ui5-popover]");
+	}
+
+	static get dependencies() {
+		return [
+			Option,
+			Label,
+			ResponsivePopover,
+			Popover,
+			List,
+			StandardListItem,
+			Icon,
+			Button,
+		];
 	}
 }
 

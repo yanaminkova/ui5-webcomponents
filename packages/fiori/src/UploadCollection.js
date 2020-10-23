@@ -165,6 +165,8 @@ const metadata = {
  *
  * <h3>ES6 Module Import</h3>
  * <code>import @ui5/webcomponents-fiori/dist/UploadCollection.js";</code>
+ * <br>
+ * <code>import "@ui5/webcomponents-fiori/dist/UploadCollectionItem.js";</code> (for <code>ui5-upload-collection-item</code>)
  *
  * @constructor
  * @author SAP SE
@@ -192,14 +194,17 @@ class UploadCollection extends UI5Element {
 		return UploadCollectionTemplate;
 	}
 
+	static get dependencies() {
+		return [
+			Icon,
+			Label,
+			List,
+			Title,
+		];
+	}
+
 	static async onDefine() {
-		await Promise.all([
-			Icon.define(),
-			Label.define(),
-			List.define(),
-			Title.define(),
-			fetchI18nBundle("@ui5/webcomponents-fiori"),
-		]);
+		await fetchI18nBundle("@ui5/webcomponents-fiori");
 	}
 
 	constructor() {

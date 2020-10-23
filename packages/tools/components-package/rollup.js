@@ -1,13 +1,13 @@
-const babel = require("rollup-plugin-babel");
 const process = require("process");
-const resolve = require("rollup-plugin-node-resolve");
-const url = require("rollup-plugin-url");
+const fs = require("fs");
+const os = require("os");
+const { babel } = require("@rollup/plugin-babel");
+const { nodeResolve } = require("@rollup/plugin-node-resolve");
+const url = require("@rollup/plugin-url");
 const { terser } = require("rollup-plugin-terser");
 const notify = require('rollup-plugin-notify');
 const filesize = require('rollup-plugin-filesize');
 const livereload = require('rollup-plugin-livereload');
-const os = require("os");
-const fs = require("fs");
 
 const packageName = JSON.parse(fs.readFileSync("./package.json")).name;
 const DEPLOY_PUBLIC_PATH = process.env.DEPLOY_PUBLIC_PATH || "";
@@ -26,7 +26,7 @@ function ui5DevImportCheckerPlugin() {
 
 const getPlugins = ({ transpile }) => {
 	const plugins = [];
-	let publicPath = DEPLOY_PUBLIC_PATH || "/resources/";
+	let publicPath = DEPLOY_PUBLIC_PATH;
 
 	if (!process.env.DEV) {
 		plugins.push(filesize({
@@ -52,12 +52,12 @@ const getPlugins = ({ transpile }) => {
 	if (transpile) {
 		plugins.push(babel({
 			presets: ["@babel/preset-env"],
-			exclude: "node_modules/**",
+			exclude: /node_modules\/(?!(lit-html|@ui5\/webcomponents))/, //exclude all node_modules/ except lit-html and all starting with @ui5/webcomponents
 			sourcemap: true,
 		}));
 	}
 
-	plugins.push(resolve());
+	plugins.push(nodeResolve());
 
 	if (!process.env.DEV) {
 		plugins.push(terser());
@@ -81,9 +81,9 @@ const getPlugins = ({ transpile }) => {
 	return plugins;
 };
 
-const getES6Config = () => {
+const getES6Config = (input = "bundle.esm.js") => {
 	return [{
-		input: "bundle.esm.js",
+		input,
 		output: {
 			dir: "dist/resources",
 			format: "esm",
@@ -102,12 +102,13 @@ const getES6Config = () => {
 	}];
 };
 
-const getES5Config = () => {
+const getES5Config = (input = "bundle.es5.js") => {
 	return [ {
-		input: "bundle.es5.js",
+		input,
 		output: {
 			dir: "dist/resources",
 			format: "iife",
+			inlineDynamicImports: true,
 			name: "sap-ui-webcomponents-bundle",
 			extend: "true",	// Whether or not to extend the global variable defined by the name option in umd or iife formats.
 			sourcemap: true
@@ -129,6 +130,16 @@ let config = getES6Config();
 
 if (process.env.ES5_BUILD) {
 	config = config.concat(getES5Config());
+}
+
+if (process.env.SCOPE) {
+	if (fs.existsSync("bundle.scoped.esm.js")) {
+		config = config.concat(getES6Config("bundle.scoped.esm.js"));
+
+		if (fs.existsSync("bundle.scoped.es5.js") && process.env.ES5_BUILD) {
+			config = config.concat(getES5Config("bundle.scoped.es5.js"));
+		}
+	}
 }
 
 module.exports = config;

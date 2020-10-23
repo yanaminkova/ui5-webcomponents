@@ -66,6 +66,7 @@
 
 .ui5-card-header .ui5-card-header-text {
 	flex: 1;
+	pointer-events: none;
 }
 
 .ui5-card-header .ui5-card-avatar {
@@ -75,9 +76,10 @@
 	align-items: center;
 	justify-content: center;
 	margin-right: .75rem;
+	pointer-events: none;
 }
 
-::slotted(ui5-icon) {
+::slotted([ui5-icon]) {
 	width: 1.5rem;
 	height: 1.5rem;
 	color: var(--sapTile_IconColor);

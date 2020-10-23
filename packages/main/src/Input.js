@@ -10,10 +10,12 @@ import {
 	isDown,
 	isSpace,
 	isEnter,
+	isBackSpace,
+	isEscape,
 } from "@ui5/webcomponents-base/dist/Keys.js";
 import Integer from "@ui5/webcomponents-base/dist/types/Integer.js";
 import { fetchI18nBundle, getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
-import getEffectiveAriaLabelText from "@ui5/webcomponents-base/dist/util/getEffectiveAriaLabelText.js";
+import { getEffectiveAriaLabelText } from "@ui5/webcomponents-base/dist/util/AriaLabelHelper.js";
 import "@ui5/webcomponents-icons/dist/icons/decline.js";
 import InputType from "./types/InputType.js";
 import Popover from "./Popover.js";
@@ -493,10 +495,19 @@ class Input extends UI5Element {
 		// Indicates if there is selected suggestionItem.
 		this.hasSuggestionItemSelected = false;
 
-		// Represents the value before user moves selection between the suggestion items.
-		// Used to register and fire "input" event upon [SPACE] or [ENTER].
-		// Note: the property "value" is updated upon selection move and can`t be used.
+		// Represents the value before user moves selection from suggestion item to another
+		// and its value is updated after each move.
+		// Note: Used to register and fire "input" event upon [SPACE] or [ENTER].
+		// Note: The property "value" is updated upon selection move and can`t be used.
 		this.valueBeforeItemSelection = "";
+
+		// Represents the value before user moves selection between the suggestion items
+		// and its value remains the same when the user navigates up or down the list.
+		// Note: Used to cancel selection upon [ESC].
+		this.valueBeforeItemPreview = "";
+
+		// Indicates if the user selection has been canceled with [ESC].
+		this.suggestionSelectionCanceled = false;
 
 		// tracks the value between focus in and focus out to detect that change event should be fired.
 		this.previousValue = undefined;
@@ -547,11 +558,10 @@ class Input extends UI5Element {
 		}
 	}
 
-	onAfterRendering() {
+	async onAfterRendering() {
 		if (!this.firstRendering && !isPhone() && this.Suggestions) {
 			const shouldOpenSuggestions = this.shouldOpenSuggestions();
 
-			this.updateStaticAreaItemContentDensity();
 			this.Suggestions.toggle(shouldOpenSuggestions, {
 				preventFocusRestore: !this.hasSuggestionItemSelected,
 			});
@@ -562,7 +572,8 @@ class Input extends UI5Element {
 
 			if (!isPhone() && shouldOpenSuggestions) {
 				// Set initial focus to the native input
-				this.inputDomRef && this.inputDomRef.focus();
+
+				(await this.getInputDOMRef()).focus();
 			}
 		}
 
@@ -588,6 +599,14 @@ class Input extends UI5Element {
 
 		if (isEnter(event)) {
 			return this._handleEnter(event);
+		}
+
+		if (isEscape(event)) {
+			return this._handleEscape(event);
+		}
+
+		if (this.showSuggestions) {
+			this.Suggestions._deselectItems();
 		}
 
 		this._keyDown = true;
@@ -623,12 +642,32 @@ class Input extends UI5Element {
 		}
 	}
 
+	_handleEscape() {
+		if (this.showSuggestions && this.Suggestions && this.Suggestions._isItemOnTarget()) {
+			// Restore the value.
+			this.value = this.valueBeforeItemPreview;
+
+			// Mark that the selection has been canceled, so the popover can close
+			// and not reopen, due to receiving focus.
+			this.suggestionSelectionCanceled = true;
+
+			// Close suggestion popover
+			this._closeRespPopover(true);
+		}
+	}
+
 	async _onfocusin(event) {
+		const inputDomRef = await this.getInputDOMRef();
+
+		if (event.target !== inputDomRef) {
+			return;
+		}
+
 		this.focused = true; // invalidating property
 		this.previousValue = this.value;
+		this.valueBeforeItemPreview = this.value;
 
-		await this.getInputDOMRef();
-		this._inputIconFocused = event.target && event.target === this.querySelector("ui5-icon");
+		this._inputIconFocused = event.target && event.target === this.querySelector("[ui5-icon]");
 	}
 
 	_onfocusout(event) {
@@ -648,9 +687,7 @@ class Input extends UI5Element {
 			return;
 		}
 
-		if (this.popover) {
-			this.popover.close();
-		}
+		this.closePopover();
 
 		this.previousValue = "";
 		this.focused = false; // invalidating property
@@ -658,7 +695,6 @@ class Input extends UI5Element {
 
 	_click(event) {
 		if (isPhone() && !this.readonly && this.Suggestions) {
-			this.updateStaticAreaItemContentDensity();
 			this.Suggestions.open(this);
 			this.isRespPopoverOpen = true;
 		}
@@ -677,8 +713,16 @@ class Input extends UI5Element {
 	}
 
 	async _handleInput(event) {
-		await this.getInputDOMRef();
-		if (event.target === this.inputDomRef) {
+		const inputDomRef = await this.getInputDOMRef();
+
+		this.suggestionSelectionCanceled = false;
+
+		if (this.value && this.type === InputType.Number && !isBackSpace(event) && !inputDomRef.value) {
+			// For input with type="Number", if the delimiter is entered second time, the inner input is firing event with empty value
+			return;
+		}
+
+		if (event.target === inputDomRef) {
 			// stop the native event, as the semantic "input" would be fired.
 			event.stopImmediatePropagation();
 		}
@@ -687,7 +731,7 @@ class Input extends UI5Element {
 			- value of the host and the internal input should be differnt in case of actual input
 			- input is called when a key is pressed => keyup should not be called yet
 		*/
-		const skipFiring = (this.inputDomRef.value === this.value) && isIE() && !this._keyDown && !!this.placeholder;
+		const skipFiring = (inputDomRef.value === this.value) && isIE() && !this._keyDown && !!this.placeholder;
 
 		!skipFiring && this.fireEventByAction(this.ACTION_USER_INPUT);
 
@@ -702,15 +746,14 @@ class Input extends UI5Element {
 		this._inputWidth = this.offsetWidth;
 	}
 
-	_closeRespPopover() {
-		this.Suggestions.close();
+	_closeRespPopover(preventFocusRestore) {
+		this.Suggestions.close(preventFocusRestore);
 	}
 
 	async _afterOpenPopover() {
 		// Set initial focus to the native input
 		if (isPhone()) {
-			await this.getInputDOMRef();
-			this.inputDomRef.focus();
+			(await this.getInputDOMRef()).focus();
 		}
 	}
 
@@ -732,7 +775,7 @@ class Input extends UI5Element {
 	}
 
 	/**
-	 * Checks if the popover is open.
+	 * Checks if the value state popover is open.
 	 * @returns {Boolean} true if the popover is open, false otherwise
 	 * @public
 	 */
@@ -741,23 +784,23 @@ class Input extends UI5Element {
 	}
 
 	async openPopover() {
-		this.popover = await this._getPopover();
-		if (this.popover) {
+		const popover = await this._getPopover();
+
+		if (popover) {
 			this._isPopoverOpen = true;
-			this.popover.openBy(this);
+			popover.openBy(this);
 		}
 	}
 
-	closePopover() {
-		if (this.isOpen()) {
-			this._isPopoverOpen = false;
-			this.popover && this.popover.close();
-		}
+	async closePopover() {
+		const popover = await this._getPopover();
+
+		popover && popover.close();
 	}
 
 	async _getPopover() {
 		const staticAreaItem = await this.getStaticAreaItemDomRef();
-		return staticAreaItem.querySelector("ui5-popover");
+		return staticAreaItem.querySelector("[ui5-popover]");
 	}
 
 	enableSuggestions() {
@@ -778,7 +821,8 @@ class Input extends UI5Element {
 		return !!(this.suggestionItems.length
 			&& this.focused
 			&& this.showSuggestions
-			&& !this.hasSuggestionItemSelected);
+			&& !this.hasSuggestionItemSelected
+			&& !this.suggestionSelectionCanceled);
 	}
 
 	selectSuggestion(item, keyboardUsed) {
@@ -791,7 +835,6 @@ class Input extends UI5Element {
 			? this.valueBeforeItemSelection !== itemText : this.value !== itemText;
 
 		this.hasSuggestionItemSelected = true;
-		this.fireEvent(this.EVENT_SUGGESTION_ITEM_SELECT, { item });
 
 		if (fireInput) {
 			this.value = itemText;
@@ -799,6 +842,11 @@ class Input extends UI5Element {
 			this.fireEvent(this.EVENT_INPUT);
 			this.fireEvent(this.EVENT_CHANGE);
 		}
+
+		this.valueBeforeItemPreview = "";
+		this.suggestionSelectionCanceled = false;
+
+		this.fireEvent(this.EVENT_SUGGESTION_ITEM_SELECT, { item });
 	}
 
 	previewSuggestion(item) {
@@ -839,7 +887,7 @@ class Input extends UI5Element {
 			return;
 		}
 
-		const inputValue = this.getInputValue();
+		const inputValue = await this.getInputValue();
 		const isSubmit = action === this.ACTION_ENTER;
 		const isUserInput = action === this.ACTION_USER_INPUT;
 
@@ -848,6 +896,7 @@ class Input extends UI5Element {
 
 		this.value = inputValue;
 		this.highlightValue = inputValue;
+		this.valueBeforeItemPreview = inputValue;
 
 		if (isSafari()) {
 			// When setting the value by hand, Safari moves the cursor when typing in the middle of the text (See #1761)
@@ -875,28 +924,22 @@ class Input extends UI5Element {
 		}
 	}
 
-	getInputValue() {
-		const inputDOM = this.getDomRef();
-		if (inputDOM) {
-			return this.inputDomRef.value;
+	async getInputValue() {
+		const domRef = this.getDomRef();
+
+		if (domRef) {
+			return (await this.getInputDOMRef()).value;
 		}
 		return "";
 	}
 
 	async getInputDOMRef() {
-		let inputDomRef;
-
-		if (isPhone() && this.Suggestions) {
+		if (isPhone() && this.Suggestions && this.suggestionItems.length) {
 			await this.Suggestions._respPopover();
-			inputDomRef = this.Suggestions && this.Suggestions.responsivePopover.querySelector(".ui5-input-inner-phone");
+			return this.Suggestions && this.Suggestions.responsivePopover.querySelector(".ui5-input-inner-phone");
 		}
 
-		if (!inputDomRef) {
-			inputDomRef = this.getDomRef().querySelector(`#${this.getInputId()}`);
-		}
-
-		this.inputDomRef = inputDomRef;
-		return this.inputDomRef;
+		return this.getDomRef().querySelector(`input`);
 	}
 
 	getLabelableElementId() {
@@ -1021,9 +1064,22 @@ class Input extends UI5Element {
 				"ariaOwns": this._inputAccInfo && this._inputAccInfo.ariaOwns,
 				"ariaExpanded": this._inputAccInfo && this._inputAccInfo.ariaExpanded,
 				"ariaDescription": this._inputAccInfo && this._inputAccInfo.ariaDescription,
-				"ariaLabel": getEffectiveAriaLabelText(this),
+				"ariaLabel": (this._inputAccInfo && this._inputAccInfo.ariaLabel) || getEffectiveAriaLabelText(this),
+				"ariaRequired": (this._inputAccInfo && this._inputAccInfo.ariaRequired) || this.required,
 			},
 		};
+	}
+
+	get ariaValueStateHiddenText() {
+		if (!this.hasValueStateMessage) {
+			return;
+		}
+
+		if (this.shouldDisplayDefaultValueStateMessage) {
+			return this.valueStateText;
+		}
+
+		return this.valueStateMessageText.map(el => el.textContent).join(" ");
 	}
 
 	get itemSelectionAnnounce() {
@@ -1034,6 +1090,7 @@ class Input extends UI5Element {
 		return {
 			popoverValueState: {
 				"ui5-valuestatemessage-root": true,
+				"ui5-responsive-popover-header": !this.isOpen(),
 				"ui5-valuestatemessage--success": this.valueState === ValueState.Success,
 				"ui5-valuestatemessage--error": this.valueState === ValueState.Error,
 				"ui5-valuestatemessage--warning": this.valueState === ValueState.Warning,
@@ -1117,11 +1174,14 @@ class Input extends UI5Element {
 		return isPhone();
 	}
 
+	static get dependencies() {
+		const Suggestions = getFeature("InputSuggestions");
+
+		return [Popover].concat(Suggestions ? Suggestions.dependencies : []);
+	}
+
 	static async onDefine() {
-		await Promise.all([
-			Popover.define(),
-			fetchI18nBundle("@ui5/webcomponents"),
-		]);
+		await fetchI18nBundle("@ui5/webcomponents");
 	}
 }
 

@@ -1,3 +1,11 @@
+import { getAssetsPath, setAssetsPath } from "@ui5/webcomponents-base/dist/config/AssetsPath.js";
+// setAssetsPath("/my-resources/");
+
+import { addCustomCSS, attachThemeLoaded, detachThemeLoaded } from "@ui5/webcomponents-base/dist/Theming";
+attachThemeLoaded(theme => {
+	console.log("Theme load complete: ", theme);
+});
+
 // OpenUI5 integration
 import "@ui5/webcomponents-base/dist/features/OpenUI5Support.js";
 
@@ -47,6 +55,7 @@ import Dialog from "./dist/Dialog.js";
 import FileUploader from "./dist/FileUploader.js";
 import Icon from "./dist/Icon.js";
 import Input from "./dist/Input.js";
+import MultiInput from "./dist/MultiInput.js";
 import Label from "./dist/Label.js";
 import Link from "./dist/Link.js";
 import Popover from "./dist/Popover.js";
@@ -86,8 +95,6 @@ window.RenderScheduler = RenderScheduler;
 import { isIE } from "@ui5/webcomponents-base/dist/Device.js";
 window.isIE = isIE; // attached to the window object for testing purposes
 
-
-// Note: keep in sync with rollup.config value for IIFE
 import { getAnimationMode, setAnimationMode } from "@ui5/webcomponents-base/dist/config/AnimationMode.js";
 import { getTheme, setTheme } from "@ui5/webcomponents-base/dist/config/Theme.js";
 import { getLanguage, setLanguage } from "@ui5/webcomponents-base/dist/config/Language.js";
@@ -97,7 +104,8 @@ import { getFirstDayOfWeek } from "@ui5/webcomponents-base/dist/config/FormatSet
 import { getRegisteredNames as getIconNames } from  "@ui5/webcomponents-base/dist/SVGIconRegistry.js";
 import applyDirection from "@ui5/webcomponents-base/dist/locale/applyDirection.js";
 import ResizeHandler from "@ui5/webcomponents-base/dist/delegate/ResizeHandler.js";
-window["sap-ui-webcomponents-bundle"] = {
+
+const testAssets = {
 	configuration : {
 		getAnimationMode,
 		setAnimationMode,
@@ -108,9 +116,18 @@ window["sap-ui-webcomponents-bundle"] = {
 		setNoConflict,
 		getRTL,
 		getFirstDayOfWeek,
+		getAssetsPath,
+		setAssetsPath
 	},
-	getIconNames,
 	getLocaleData,
 	applyDirection,
 	ResizeHandler,
+	addCustomCSS,
+	attachThemeLoaded,
+	detachThemeLoaded,
+	getIconNames,
 };
+
+window["sap-ui-webcomponents-bundle"] = testAssets;
+
+export default testAssets;

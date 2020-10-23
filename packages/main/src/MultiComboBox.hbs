@@ -16,17 +16,18 @@
 		@ui5-token-delete="{{_tokenDelete}}"
 		@focusout="{{_tokenizerFocusOut}}"
 		@click={{_click}}
-		?expanded="{{expandedTokenizer}}"
+		@keydown="{{_onTokenizerKeydown}}"
+		?expanded="{{_tokenizerExpanded}}"
 	>
 		{{#each items}}
 			{{#if this.selected}}
 				<ui5-token
-				?readonly="{{../readonly}}"
-				class="ui5-multi-combobox-token"
-				data-ui5-id="{{this._id}}"
-				part="token-{{@index}}"
+					?readonly="{{../readonly}}"
+					class="ui5-multi-combobox-token"
+					data-ui5-id="{{this._id}}"
+					part="token-{{@index}}"
+					text="{{this.text}}"
 				>
-					{{this.text}}
 				</ui5-token>
 			{{/if}}
 		{{/each}}
@@ -44,8 +45,6 @@
 		@change={{_inputChange}}
 		@keydown="{{_onkeydown}}"
 		@keyup="{{_onkeyup}}"
-		@focusin="{{_focusin}}"
-		@focusout="{{_focusout}}"
 		@click={{_click}}
 		role="combobox"
 		aria-haspopup="listbox"
@@ -55,13 +54,18 @@
 		aria-describedby="{{valueStateTextId}}"
 	/>
 
+	{{#if icon}}
+		<slot name="icon"></slot>
+	{{/if}}
+
 	{{#unless readonly}}
 		<ui5-icon name="slim-arrow-down"
 			input-icon
 			slot="icon"
 			tabindex="-1"
-			@click={{togglePopover}}
-			?pressed="{{_iconPressed}}"
+			@click="{{togglePopover}}"
+			@mousedown="{{_onIconMousedown}}"
+			?pressed="{{open}}"
 			dir="{{effectiveDir}}"
 			accessible-name="{{_iconAccessibleNameText}}"
 		></ui5-icon>

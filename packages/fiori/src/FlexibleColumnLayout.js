@@ -6,6 +6,7 @@ import Integer from "@ui5/webcomponents-base/dist/types/Integer.js";
 import { fetchI18nBundle, getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import AnimationMode from "@ui5/webcomponents-base/dist/types/AnimationMode.js";
 import { getAnimationMode } from "@ui5/webcomponents-base/dist/config/AnimationMode.js";
+import { isIE } from "@ui5/webcomponents-base/dist/Device.js";
 import Button from "@ui5/webcomponents/dist/Button.js";
 import "@ui5/webcomponents-icons/dist/icons/slim-arrow-left.js";
 import "@ui5/webcomponents-icons/dist/icons/slim-arrow-right.js";
@@ -21,6 +22,10 @@ import {
 	FCL_START_COLUMN_TXT,
 	FCL_MIDDLE_COLUMN_TXT,
 	FCL_END_COLUMN_TXT,
+	FCL_START_COLUMN_EXPAND_BUTTON_TOOLTIP,
+	FCL_START_COLUMN_COLLAPSE_BUTTON_TOOLTIP,
+	FCL_END_COLUMN_EXPAND_BUTTON_TOOLTIP,
+	FCL_END_COLUMN_COLLAPSE_BUTTON_TOOLTIP,
 } from "./generated/i18n/i18n-defaults.js";
 
 // Template
@@ -244,11 +249,12 @@ class FlexibleColumnLayout extends UI5Element {
 		return FlexibleColumnLayoutTemplate;
 	}
 
+	static get dependencies() {
+		return [Button];
+	}
+
 	static async onDefine() {
-		await Promise.all([
-			Button.define(),
-			fetchI18nBundle("@ui5/webcomponents-fiori"),
-		]);
+		await fetchI18nBundle("@ui5/webcomponents-fiori");
 	}
 
 	static get BREAKPOINTS() {
@@ -490,6 +496,10 @@ class FlexibleColumnLayout extends UI5Element {
 		const hasAnimation = getAnimationMode() !== AnimationMode.None;
 
 		return {
+			root: {
+				"ui5-fcl-root": true,
+				"ui5-fcl--ie": isIE(),
+			},
 			columns: {
 				start: {
 					"ui5-fcl-column": true,
@@ -623,6 +633,22 @@ class FlexibleColumnLayout extends UI5Element {
 
 	get _effectiveLayoutsByMedia() {
 		return this._layoutsConfiguration || getLayoutsByMedia();
+	}
+
+	get accStartArrowText() {
+		if (this.startArrowDirection === "mirror") {
+			return this.i18nBundle.getText(FCL_START_COLUMN_COLLAPSE_BUTTON_TOOLTIP);
+		}
+
+		return this.i18nBundle.getText(FCL_START_COLUMN_EXPAND_BUTTON_TOOLTIP);
+	}
+
+	get accEndArrowText() {
+		if (this.endArrowDirection === "mirror") {
+			return this.i18nBundle.getText(FCL_END_COLUMN_COLLAPSE_BUTTON_TOOLTIP);
+		}
+
+		return this.i18nBundle.getText(FCL_END_COLUMN_EXPAND_BUTTON_TOOLTIP);
 	}
 }
 

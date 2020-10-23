@@ -1,6 +1,7 @@
 import ValueState from "@ui5/webcomponents-base/dist/types/ValueState.js";
 import ListItem from "./ListItem.js";
 import Icon from "./Icon.js";
+import Avatar from "./Avatar.js";
 import StandardListItemTemplate from "./generated/templates/StandardListItemTemplate.lit.js";
 
 /**
@@ -150,8 +151,12 @@ class StandardListItem extends ListItem {
 		return (this.icon && this.iconEnd);
 	}
 
-	static async onDefine() {
-		await Icon.define();
+	static get dependencies() {
+		return [
+			...ListItem.dependencies,
+			Icon,
+			Avatar,
+		];
 	}
 }
 

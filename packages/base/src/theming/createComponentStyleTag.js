@@ -2,8 +2,13 @@ import createStyleInHead from "../util/createStyleInHead.js";
 import getEffectiveStyle from "./getEffectiveStyle.js";
 import adaptCSSForIE from "./adaptCSSForIE.js";
 import { ponyfillNeeded, schedulePonyfill } from "./CSSVarsPonyfill.js";
+import { attachCustomCSSChange } from "./CustomStyle.js";
 
 const IEStyleSet = new Set();
+
+attachCustomCSSChange(tag => {
+	IEStyleSet.delete(tag);
+});
 
 const getStaticStyle = ElementClass => {
 	let componentStaticStyles = ElementClass.staticAreaStyles;
@@ -21,12 +26,13 @@ const getStaticStyle = ElementClass => {
  */
 const createComponentStyleTag = ElementClass => {
 	const tag = ElementClass.getMetadata().getTag();
+	const pureTag = ElementClass.getMetadata().getPureTag();
 	if (IEStyleSet.has(tag)) {
 		return;
 	}
 
 	let cssContent = getEffectiveStyle(ElementClass);
-	cssContent = adaptCSSForIE(cssContent, tag);
+	cssContent = adaptCSSForIE(cssContent, tag, pureTag);
 
 	// Append static CSS, if any, for IE
 	let staticCssContent = getStaticStyle(ElementClass);
@@ -37,7 +43,6 @@ const createComponentStyleTag = ElementClass => {
 
 	createStyleInHead(cssContent, {
 		"data-ui5-element-styles": tag,
-		"disabled": "disabled",
 	});
 	if (ponyfillNeeded()) {
 		schedulePonyfill();

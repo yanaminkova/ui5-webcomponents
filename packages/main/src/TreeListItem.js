@@ -161,15 +161,18 @@ class TreeListItem extends ListItem {
 	}
 
 	static get styles() {
-		return [...ListItem.styles, treeListItemCss];
+		return [ListItem.styles, treeListItemCss];
 	}
 
 	static get metadata() {
 		return metadata;
 	}
 
-	static async onDefine() {
-		await Icon.define();
+	static get dependencies() {
+		return [
+			...ListItem.dependencies,
+			Icon,
+		];
 	}
 
 	onBeforeRendering() {

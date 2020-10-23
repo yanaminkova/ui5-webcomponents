@@ -80,19 +80,19 @@ class ResponsivePopover extends Popover {
 	}
 
 	static get styles() {
-		return [...Popover.styles, ResponsivePopoverCss];
+		return [Popover.styles, ResponsivePopoverCss];
 	}
 
 	static get template() {
 		return ResponsivePopoverTemplate;
 	}
 
-	static async onDefine() {
-		await Promise.all([
-			Button.define(),
-			Dialog.define(),
-			Title.define(),
-		]);
+	static get dependencies() {
+		return [
+			Button,
+			Dialog,
+			Title,
+		];
 	}
 
 	/**
@@ -155,7 +155,7 @@ class ResponsivePopover extends Popover {
 	}
 
 	get _dialog() {
-		return this.shadowRoot.querySelector("ui5-dialog");
+		return this.shadowRoot.querySelector("[ui5-dialog]");
 	}
 
 	get _isPhone() {

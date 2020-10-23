@@ -115,7 +115,7 @@ const metadata = {
  * @author SAP SE
  * @alias sap.ui.webcomponents.main.TimelineItem
  * @extends UI5Element
- * @tagname ui5-timeline
+ * @tagname ui5-timeline-item
  * @public
  */
 class TimelineItem extends UI5Element {
@@ -143,11 +143,11 @@ class TimelineItem extends UI5Element {
 		this.fireEvent("item-name-click", {});
 	}
 
-	static async onDefine() {
-		await Promise.all([
-			Icon.define(),
-			Link.define(),
-		]);
+	static get dependencies() {
+		return [
+			Icon,
+			Link,
+		];
 	}
 }
 
