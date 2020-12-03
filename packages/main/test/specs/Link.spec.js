@@ -29,6 +29,16 @@ describe("General API", () => {
 		assert.strictEqual(link.getAttribute("target"), TARGET_ATTRIBUTE, "The target attribute is changed.");
 	});
 
+	it("tests noreferrer noopener attributes", () => {
+		const link = browser.$("#withoutNoreferrerNopener");
+		assert.strictEqual(link.getAttribute("noreferrer"), "false", "The attribute is not set.");
+		assert.strictEqual(link.getAttribute("noopener"), "false", "The attribute is not set.");
+
+		const link2 = browser.$("#withNoreferrerNopener");
+		assert.strictEqual(link2.getAttribute("noreferrer"), "true", "The attribute is set.");
+		assert.strictEqual(link2.getAttribute("noopener"), "true", "The attribute is set.");
+	});
+
 	it("should wrap the text of the link", () => {
 		const wrappingLabel = browser.$("#wrapping-link");
 		const truncatingLabel = browser.$("#non-wrapping-link");

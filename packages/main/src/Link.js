@@ -118,9 +118,28 @@ const metadata = {
 			defaultValue: "",
 		},
 
-		_rel: {
-			type: String,
-			noAttribute: true,
+		/**
+		 * Defines if <code>noreferrer</code> attribute will be set on the anchor,
+		 * by default <code>noreferrer</code> will be set.
+		 *
+		 * @private
+		 * @type {boolean}
+		 * @defaultvalue false
+		 */
+		referrer: {
+			type: Boolean,
+		},
+
+		/**
+		 * Defines if <code>noopener</code> attribute will be set on the anchor,
+		 * by default <code>noopener</code> will be set.
+		 *
+		 * @private
+		 * @type {boolean}
+		 * @defaultvalue false
+		 */
+		opener: {
+			type: Boolean,
 		},
 	},
 	slots: /** @lends sap.ui.webcomponents.main.Link.prototype */ {
@@ -192,7 +211,7 @@ const metadata = {
 class Link extends UI5Element {
 	constructor() {
 		super();
-		this._dummyAnchor = document.createElement("a");
+
 		this.i18nBundle = getI18nBundle("@ui5/webcomponents");
 	}
 
@@ -212,24 +231,6 @@ class Link extends UI5Element {
 		return linkCss;
 	}
 
-	onBeforeRendering() {
-		const needsNoReferrer = this.target === "_blank"
-			&& this.href
-			&& this._isCrossOrigin();
-
-		this._rel = needsNoReferrer ? "noreferrer" : undefined;
-	}
-
-	_isCrossOrigin() {
-		const loc = window.location;
-
-		this._dummyAnchor.href = this.href;
-
-		return !(this._dummyAnchor.hostname === loc.hostname
-			&& this._dummyAnchor.port === loc.port
-			&& this._dummyAnchor.protocol === loc.protocol);
-	}
-
 	get tabIndex() {
 		return (this.disabled || !this.textContent.length) ? "-1" : "0";
 	}
@@ -244,6 +245,14 @@ class Link extends UI5Element {
 
 	get hasLinkType() {
 		return this.design !== LinkDesign.Default;
+	}
+
+	get noopener() {
+		return !this.opener;
+	}
+
+	get noreferrer() {
+		return !this.referrer;
 	}
 
 	static typeTextMappings() {
