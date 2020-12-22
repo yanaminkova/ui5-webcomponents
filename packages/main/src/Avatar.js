@@ -3,6 +3,7 @@ import litRender from "@ui5/webcomponents-base/dist/renderer/LitRenderer.js";
 import { fetchI18nBundle, getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import encodeCSS from "@ui5/webcomponents-base/dist/util/encodeCSS.js";
 
+import { isEnter, isSpace } from "@ui5/webcomponents-base/dist/Keys.js";
 // Template
 import AvatarTemplate from "./generated/templates/AvatarTemplate.lit.js";
 
@@ -24,6 +25,24 @@ const metadata = {
 	tag: "ui5-avatar",
 	languageAware: true,
 	properties: /** @lends sap.ui.webcomponents.main.Avatar.prototype */ {
+
+		/**
+		 * Defines if the avatar is interactive (focusable and pressable)
+		 * @type {boolean}
+		 * @defaultValue false
+		 * @public
+		 */
+		interactive: {
+			type: Boolean,
+		},
+
+		/**
+		 * Indicates if the elements is on focus
+		 * @private
+		 */
+		focused: {
+			type: Boolean,
+		},
 
 		/**
 		 * Defines the source path to the desired image.
@@ -106,6 +125,14 @@ const metadata = {
 		},
 
 		/**
+		 * @private
+		 */
+		_size: {
+			type: String,
+			defaultValue: AvatarSize.S,
+		},
+
+		/**
 		 * Defines the fit type of the desired image.
 		 * <br><br>
 		 * Available options are:
@@ -153,6 +180,14 @@ const metadata = {
 		},
 
 		/**
+		 * @private
+		 */
+		_backgroundColor: {
+			type: String,
+			defaultValue: AvatarBackgroundColor.Accent6,
+		},
+
+		/**
 		 * Defines the text alternative of the <code>ui5-avatar</code>.
 		 * If not provided a default text alternative will be set, if present.
 		 *
@@ -164,10 +199,23 @@ const metadata = {
 		accessibleName: {
 			type: String,
 		},
+
+		_tabIndex: {
+			type: String,
+			noAttribute: true,
+		},
 	},
 	slots: /** @lends sap.ui.webcomponents.main.Avatar.prototype */ {
 	},
 	events: /** @lends sap.ui.webcomponents.main.Avatar.prototype */ {
+		/**
+		* Fired on mouseup, space and enter if avatar is interactive
+		*
+		* @event
+		* @private
+		* @since 1.0.0-rc.11
+		*/
+		click: {},
 	},
 };
 
@@ -224,6 +272,34 @@ class Avatar extends UI5Element {
 		await fetchI18nBundle("@ui5/webcomponents");
 	}
 
+	get tabindex() {
+		return this._tabIndex || (this.interactive ? "0" : "-1");
+	}
+
+	/**
+	 * Returns the effective avatar size.
+	 * @readonly
+	 * @type { String }
+	 * @defaultValue "S"
+	 * @private
+	 */
+	get _effectiveSize() {
+		// we read the attribute, because the "size" property will always have a default value
+		return this.getAttribute("size") || this._size;
+	}
+
+	/**
+	 * Returns the effective background color.
+	 * @readonly
+	 * @type { String }
+	 * @defaultValue "Accent6"
+	 * @private
+	 */
+	get _effectiveBackgroundColor() {
+		// we read the attribute, because the "background-color" property will always have a default value
+		return this.getAttribute("background-color") || this._backgroundColor;
+	}
+
 	get validInitials() {
 		const validInitials = /^[a-zA-Z]{1,2}$/;
 
@@ -248,6 +324,37 @@ class Avatar extends UI5Element {
 				"background-image": `url("${encodeCSS(this.image)}")`,
 			},
 		};
+	}
+
+	_onclick(event) {
+		event.isMarked = "avatar";
+		if (this.interactive) {
+			event.preventDefault();
+			// Prevent the native event and fire custom event because otherwise the noConfict event won't be thrown
+			this.fireEvent("click");
+		}
+	}
+
+	_onkeydown(event) {
+		if (this.interactive && isEnter(event)) {
+			this.fireEvent("click");
+		}
+	}
+
+	_onkeyup(event) {
+		if (this.interactive && !event.shiftKey && isSpace(event)) {
+			this.fireEvent("click");
+		}
+	}
+
+	_onfocusout() {
+		this.focused = false;
+	}
+
+	_onfocusin() {
+		if (this.interactive) {
+			this.focused = true;
+		}
 	}
 }
 

@@ -16,7 +16,7 @@ const metadata = {
 	tag: "ui5-timeline",
 	languageAware: true,
 	managedSlots: true,
-	slots: /** @lends sap.ui.webcomponents.main.Timeline.prototype */ {
+	slots: /** @lends sap.ui.webcomponents.fiori.Timeline.prototype */ {
 		/**
 		 * Determines the content of the <code>ui5-timeline</code>.
 		 *
@@ -45,7 +45,7 @@ const metadata = {
  *
  * @constructor
  * @author SAP SE
- * @alias sap.ui.webcomponents.main.Timeline
+ * @alias sap.ui.webcomponents.fiori.Timeline
  * @extends UI5Element
  * @tagname ui5-timeline
  * @appenddocs TimelineItem
@@ -72,8 +72,11 @@ class Timeline extends UI5Element {
 	constructor() {
 		super();
 
-		this.initItemNavigation();
-		this.i18nBundle = getI18nBundle("@ui5/webcomponents");
+		this._itemNavigation = new ItemNavigation(this, {
+			getItemsCallback: () => this.items,
+		});
+
+		this.i18nBundle = getI18nBundle("@ui5/webcomponents-fiori");
 	}
 
 	static get dependencies() {
@@ -81,16 +84,17 @@ class Timeline extends UI5Element {
 	}
 
 	static async onDefine() {
-		await fetchI18nBundle("@ui5/webcomponents");
-	}
-
-	initItemNavigation() {
-		this._itemNavigation = new ItemNavigation(this);
-		this._itemNavigation.getItemsCallback = () => this.items;
+		await fetchI18nBundle("@ui5/webcomponents-fiori");
 	}
 
 	get ariaLabel() {
 		return this.i18nBundle.getText(TIMELINE_ARIA_LABEL);
+	}
+
+	_onfocusin(event) {
+		const target = event.target;
+
+		this._itemNavigation.update(target);
 	}
 }
 

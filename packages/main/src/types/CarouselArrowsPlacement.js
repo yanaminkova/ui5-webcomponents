@@ -35,6 +35,6 @@ class CarouselArrowsPlacement extends DataType {
 	}
 }
 
-CarouselArrowsPlacement.generataTypeAcessors(CarouselArrowsPlacementTypes);
+CarouselArrowsPlacement.generateTypeAccessors(CarouselArrowsPlacementTypes);
 
 export default CarouselArrowsPlacement;

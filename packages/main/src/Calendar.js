@@ -1,14 +1,16 @@
-import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
-import litRender from "@ui5/webcomponents-base/dist/renderer/LitRenderer.js";
-import { fetchCldr } from "@ui5/webcomponents-base/dist/asset-registries/LocaleData.js";
-import { getCalendarType } from "@ui5/webcomponents-base/dist/config/CalendarType.js";
 import getLocale from "@ui5/webcomponents-base/dist/locale/getLocale.js";
 import DateFormat from "@ui5/webcomponents-localization/dist/DateFormat.js";
 import getCachedLocaleDataInstance from "@ui5/webcomponents-localization/dist/getCachedLocaleDataInstance.js";
 import CalendarDate from "@ui5/webcomponents-localization/dist/dates/CalendarDate.js";
-import CalendarType from "@ui5/webcomponents-base/dist/types/CalendarType.js";
-import Integer from "@ui5/webcomponents-base/dist/types/Integer.js";
-import { isF4, isF4Shift } from "@ui5/webcomponents-base/dist/Keys.js";
+import CalendarSelection from "@ui5/webcomponents-base/dist/types/CalendarSelection.js";
+import {
+	isF4,
+	isF4Shift,
+	isTabNext,
+	isTabPrevious,
+} from "@ui5/webcomponents-base/dist/Keys.js";
+import RenderScheduler from "@ui5/webcomponents-base/dist/RenderScheduler.js";
+import PickerBase from "./PickerBase.js";
 import CalendarHeader from "./CalendarHeader.js";
 import DayPicker from "./DayPicker.js";
 import MonthPicker from "./MonthPicker.js";
@@ -30,57 +32,21 @@ const metadata = {
 	tag: "ui5-calendar",
 	properties: /** @lends  sap.ui.webcomponents.main.Calendar.prototype */ {
 		/**
-		 * Defines the UNIX timestamp - seconds since 00:00:00 UTC on Jan 1, 1970.
-		 * @type {Integer}
-		 * @public
-		*/
-		timestamp: {
-			type: Integer,
-		},
-
-		/**
-		 * Defines the calendar type used for display.
-		 * If not defined, the calendar type of the global configuration is used.
-		 * Available options are: "Gregorian", "Islamic", "Japanese", "Buddhist" and "Persian".
-		 * @type {CalendarType}
+		 * Defines the type of selection used in the calendar component.
+		 * The property takes as value an object of type <code>CalendarSelection</code>.
+		 * Accepted property values are:<br>
+		 * <ul>
+		 * <li><code>CalendarSelection.Single</code> - enables a single date selection.(default value)</li>
+		 * <li><code>CalendarSelection.Range</code> - enables selection of a date range.</li>
+		 * <li><code>CalendarSelection.Multiple</code> - enables selection of multiple dates.</li>
+		 * </ul>
+		 * @type {CalendarSelection}
+		 * @defaultvalue "Single"
 		 * @public
 		 */
-		primaryCalendarType: {
-			type: CalendarType,
-		},
-
-		/**
-		 * Defines the selected dates as UTC timestamps.
-		 * @type {Array}
-		 * @public
-		 */
-		selectedDates: {
-			type: Integer,
-			multiple: true,
-		},
-
-		/**
-		 * Determines the мinimum date available for selection.
-		 *
-		 * @type {string}
-		 * @defaultvalue ""
-		 * @since 1.0.0-rc.6
-		 * @public
-		 */
-		minDate: {
-			type: String,
-		},
-
-		/**
-		 * Determines the maximum date available for selection.
-		 *
-		 * @type {string}
-		 * @defaultvalue ""
-		 * @since 1.0.0-rc.6
-		 * @public
-		 */
-		maxDate: {
-			type: String,
+		selection: {
+			type: CalendarSelection,
+			defaultValue: CalendarSelection.Single,
 		},
 
 		/**
@@ -93,7 +59,6 @@ const metadata = {
 		 * @type {boolean}
 		 * @defaultvalue false
 		 * @public
-		 * @since 1.0.0-rc.8
 		 */
 		hideWeekNumbers: {
 			type: Boolean,
@@ -124,79 +89,91 @@ const metadata = {
 			type: String,
 			noAttribute: true,
 		},
-
-		formatPattern: {
-			type: String,
-		},
 	},
 	events: /** @lends  sap.ui.webcomponents.main.Calendar.prototype */ {
 		/**
 		 * Fired when the selected dates changed.
 		 * @event sap.ui.webcomponents.main.Calendar#selected-dates-change
-		 * @param {Array} dates The selected dates' timestamps
+		 * @param {Array} dates The selected dates timestamps
 		 * @public
 		 */
-		"selected-dates-change": { type: Array },
+		"selected-dates-change": {
+			detail: {
+				dates: { type: Array },
+			},
+		 },
 	},
 };
 
 /**
  * @class
  *
- * <h3>Keyboard Handling</h3>
-* The <code>ui5-calendar</code> provides advanced keyboard handling.
-* If the <code>ui5-calendar</code> is focused the user can
-* choose a picker by using the following shortcuts: <br>
-* <ul>
-* <li>[F4] - Shows month picker</li>
-* <li>[SHIFT] + [F4] - Shows year picker</li>
-* <br>
-* When a picker is showed and focused the user can use the following keyboard
-* shortcuts in order to perform a navigation:
-* <br>
-* - Day picker: <br>
-* <ul>
-* <li>[PAGEUP] - Navigate to the previous month</li>
-* <li>[PAGEDOWN] - Navigate to the next month</li>
-* <li>[SHIFT] + [PAGEUP] - Navigate to the previous year</li>
-* <li>[SHIFT] + [PAGEDOWN] - Navigate to the next year</li>
-* <li>[CTRL] + [SHIFT] + [PAGEUP] - Navigate ten years backwards</li>
-* <li>[CTRL] + [SHIFT] + [PAGEDOWN] - Navigate ten years forwards</li>
-* </ul>
-* <br>
-* - Month picker: <br>
-* <ul>
-* <li>[PAGEUP] - Navigate to the previous month</li>
-* <li>[PAGEDOWN] - Navigate to the next month</li>
-* </ul>
-* <br>
-* - Year picker: <br>
-* <ul>
-* <li>[PAGEUP] - Navigate to the previous year range</li>
-* <li>[PAGEDOWN] - Navigate the next year range</li>
-* </ul>
-*/
-
-/**
- * @class
+ * <h3 class="comment-api-title">Overview</h3>
  *
- * The <code>ui5-calendar</code> can be used standale to display the years, months, weeks and days,
- * but the main purpose of the <code>ui5-calendar</code> is to be used within a <code>ui5-date-picker</code>.
+ * The <code>ui5-calendar</code> can be used stand alone to display the years, months, weeks and days
+ * <br><br>
+ *
+ * <h3>Usage</h3>
+ *
+ * The user can navigate to a particular date by:
+ * <br>
+ * <ul>
+ * <li>Pressing over a month inside the months view</li>
+ * <li>Pressing over an year inside the years view</li>
+ * </ul>
+ * <br>
+ * The user can comfirm a date selection by pressing over a date inside the days view.
+ * <br><br>
+ *
+ * <h3>Keyboard Handling</h3>
+ * The <code>ui5-calendar</code> provides advanced keyboard handling.
+ * If the <code>ui5-calendar</code> is focused the user can
+ * choose a picker by using the following shortcuts: <br>
+ * <ul>
+ * <li>[F4] - Shows month picker</li>
+ * <li>[SHIFT] + [F4] - Shows year picker</li>
+ * <br>
+ * When a picker is showed and focused the user can use the following keyboard
+ * shortcuts in order to perform a navigation:
+ * <br>
+ * - Day picker: <br>
+ * <ul>
+ * <li>[PAGEUP] - Navigate to the previous month</li>
+ * <li>[PAGEDOWN] - Navigate to the next month</li>
+ * <li>[SHIFT] + [PAGEUP] - Navigate to the previous year</li>
+ * <li>[SHIFT] + [PAGEDOWN] - Navigate to the next year</li>
+ * <li>[CTRL] + [SHIFT] + [PAGEUP] - Navigate ten years backwards</li>
+ * <li>[CTRL] + [SHIFT] + [PAGEDOWN] - Navigate ten years forwards</li>
+ * </ul>
+ * <br>
+ * - Month picker: <br>
+ * <ul>
+ * <li>[PAGEUP] - Navigate to the previous month</li>
+ * <li>[PAGEDOWN] - Navigate to the next month</li>
+ * </ul>
+ * <br>
+ * - Year picker: <br>
+ * <ul>
+ * <li>[PAGEUP] - Navigate to the previous year range</li>
+ * <li>[PAGEDOWN] - Navigate the next year range</li>
+ * </ul>
+ * <br>
+ *
+ * <h3>ES6 Module Import</h3>
+ *
+ * <code>import "@ui5/webcomponents/dist/Calendar";</code>
  *
  * @constructor
  * @author SAP SE
  * @alias sap.ui.webcomponents.main.Calendar
- * @extends sap.ui.webcomponents.base.UI5Element
+ * @extends sap.ui.webcomponents.main.PickerBase
  * @tagname ui5-calendar
  * @public
+ * @since 1.0.0-rc.11
  */
-class Calendar extends UI5Element {
+class Calendar extends PickerBase {
 	static get metadata() {
 		return metadata;
-	}
-
-	static get render() {
-		return litRender;
 	}
 
 	static get template() {
@@ -218,6 +195,7 @@ class Calendar extends UI5Element {
 		this._oMonth = {};
 		this._oMonth.onSelectedDatesChange = this._handleSelectedDatesChange.bind(this);
 		this._oMonth.onNavigate = this._handleMonthNavigate.bind(this);
+
 
 		this._monthPicker = {};
 		this._monthPicker._hidden = true;
@@ -247,12 +225,14 @@ class Calendar extends UI5Element {
 
 		this._oMonth.formatPattern = this._formatPattern;
 		this._oMonth.timestamp = this._timestamp;
-		this._oMonth.selectedDates = [...this._selectedDates];
+		this._oMonth.selectedDates = [...this.selectedDates];
 		this._oMonth.primaryCalendarType = this._primaryCalendarType;
+		this._oMonth.selection = this.selection;
 		this._oMonth.minDate = this.minDate;
 		this._oMonth.maxDate = this.maxDate;
 		this._header.monthText = localeData.getMonths("wide", this._primaryCalendarType)[this._month];
 		this._header.yearText = oYearFormat.format(this._localDate, true);
+		this._header.tabIndex = "-1";
 
 		// month picker
 		this._monthPicker.primaryCalendarType = this._primaryCalendarType;
@@ -268,6 +248,10 @@ class Calendar extends UI5Element {
 		this._isShiftingYears = false;
 
 		this._refreshNavigationButtonsState();
+	}
+
+	onAfterRendering() {
+		this._setDayPickerCurrentIndex(this._calendarDate, false);
 	}
 
 	_refreshNavigationButtonsState() {
@@ -334,72 +318,28 @@ class Calendar extends UI5Element {
 		}
 	}
 
-	get _timestamp() {
-		return this.timestamp !== undefined ? this.timestamp : Math.floor(new Date().getTime() / 1000);
+	get dayPicker() {
+		return this.shadowRoot.querySelector("ui5-daypicker");
 	}
 
-	get _localDate() {
-		return new Date(this._timestamp * 1000);
+	get monthPicker() {
+		return this.shadowRoot.querySelector("ui5-monthpicker");
 	}
 
-	get _calendarDate() {
-		return CalendarDate.fromTimestamp(this._localDate.getTime(), this._primaryCalendarType);
+	get yearPicker() {
+		return this.shadowRoot.querySelector("ui5-yearpicker");
 	}
 
-	get _month() {
-		return this._calendarDate.getMonth();
+	get header() {
+		return this.shadowRoot.querySelector("ui5-calendar-header");
 	}
 
-	get _primaryCalendarType() {
-		const localeData = getCachedLocaleDataInstance(getLocale());
-		return this.primaryCalendarType || getCalendarType() || localeData.getPreferredCalendarType();
+	get monthButton() {
+		return this.header.shadowRoot.querySelector("[data-sap-show-picker='Month']");
 	}
 
-	get _formatPattern() {
-		return this.formatPattern || "medium"; // get from config
-	}
-
-	get _isPattern() {
-		return this._formatPattern !== "medium" && this._formatPattern !== "short" && this._formatPattern !== "long";
-	}
-
-	get _selectedDates() {
-		return this.selectedDates || [];
-	}
-
-	get _maxDate() {
-		return this.maxDate ? this._getTimeStampFromString(this.maxDate) : this._getMaxCalendarDate();
-	}
-
-	get _minDate() {
-		return this.minDate ? this._getTimeStampFromString(this.minDate) : this._getMinCalendarDate();
-	}
-
-	_getTimeStampFromString(value) {
-		const jsDate = this.getFormat().parse(value);
-		if (jsDate) {
-			return CalendarDate.fromLocalJSDate(jsDate, this._primaryCalendarType).toUTCJSDate().valueOf();
-		}
-		return undefined;
-	}
-
-	_getMinCalendarDate() {
-		const minDate = new CalendarDate(1, 0, 1, this._primaryCalendarType);
-		minDate.setYear(1);
-		minDate.setMonth(0);
-		minDate.setDate(1);
-		return minDate.valueOf();
-	}
-
-	_getMaxCalendarDate() {
-		const maxDate = new CalendarDate(1, 0, 1, this._primaryCalendarType);
-		maxDate.setYear(9999);
-		maxDate.setMonth(11);
-		const tempDate = new CalendarDate(maxDate, this._primaryCalendarType);
-		tempDate.setDate(1);
-		tempDate.setMonth(tempDate.getMonth() + 1, 0);
-		maxDate.setDate(tempDate.getDate());// 31st for Gregorian Calendar
-		return maxDate.valueOf();
+	get yearButton() {
+		return this.header.shadowRoot.querySelector("[data-sap-show-picker='Year']");
 	}
 
 	_onkeydown(event) {
@@ -416,12 +356,92 @@ class Calendar extends UI5Element {
 				this._hideMonthPicker();
 			}
 		}
+
+		if (isTabNext(event)) {
+			this._handleTabNext(event);
+		}
+
+		if (isTabPrevious(event)) {
+			this._handleTabPrevous(event);
+		}
+	}
+
+	_handleTabNext(event) {
+		const target = event.target;
+
+		if (target.tagName === "UI5-DAYPICKER" || target.tagName === "UI5-MONTHPICKER" || target.tagName === "UI5-YEARPICKER") {
+			if (this.monthButton.getAttribute("hidden") === null) {
+				this.monthButton.focus();
+			} else {
+				this.yearButton.focus();
+			}
+			event.preventDefault();
+		} else if (target.tagName === "UI5-CALENDAR-HEADER" && event.path[0].getAttribute("data-sap-show-picker") === "Month") {
+			this.yearButton.focus();
+			event.preventDefault();
+		} else {
+			this._setPickerCurrentTabindex(-1);
+		}
+	}
+
+	_handleTabPrevous(event) {
+		const target = event.target;
+
+		if (target.tagName === "UI5-CALENDAR-HEADER" && event.path[0].getAttribute("data-sap-show-picker") === "Month") {
+			this._moveFocusToPickerContent();
+			event.preventDefault();
+		} else if (target.tagName === "UI5-CALENDAR-HEADER" && event.path[0].getAttribute("data-sap-show-picker") === "Year") {
+			if (this.monthButton.getAttribute("hidden") === null) {
+				this.monthButton.focus();
+			} else {
+				this._moveFocusToPickerContent();
+			}
+			event.preventDefault();
+		}
+	}
+
+	_moveFocusToPickerContent() {
+		if (!this._oMonth._hidden) {
+			this.dayPicker._itemNav.focusCurrent();
+		} else if (!this._monthPicker._hidden) {
+			this.monthPicker._itemNav.focusCurrent();
+		} else {
+			this.yearPicker._itemNav.focusCurrent();
+		}
+	}
+
+	_onfocusout(event) {
+		this._header.tabIndex = "-1";
+		this._setPickerCurrentTabindex(0);
+	}
+
+	_setPickerCurrentTabindex(index) {
+		if (this.dayPicker) {
+			this.dayPicker._setCurrentItemTabIndex(index);
+		}
+
+		if (this.monthPicker) {
+			this.monthPicker._setCurrentItemTabIndex(index);
+		}
+
+		if (this.yearPicker) {
+			this.yearPicker._setCurrentItemTabIndex(index);
+		}
 	}
 
 	_handleSelectedDatesChange(event) {
-		this.selectedDates = [...event.detail.dates];
+		const selectedDates = event.detail.dates;
 
-		this.fireEvent("selected-dates-change", { dates: event.detail.dates });
+		// Deselecting a date in multiple selection type
+		if (this.selection === CalendarSelection.Multiple && this.selectedDates.length > selectedDates.length) {
+			const deselectedDates = this.selectedDates.filter(timestamp => !selectedDates.includes(timestamp));
+			this.timestamp = deselectedDates[0];
+		} else {
+			this.timestamp = selectedDates[selectedDates.length - 1];
+		}
+
+		this.selectedDates = [...selectedDates];
+		this.fireEvent("selected-dates-change", { dates: selectedDates });
 	}
 
 	_handleMonthNavigate(event) {
@@ -438,50 +458,56 @@ class Calendar extends UI5Element {
 		}
 	}
 
-	_handleSelectedMonthChange(event) {
-		const oNewDate = this._calendarDate;
-		const newMonthIndex = CalendarDate.fromTimestamp(
-			event.detail.timestamp * 1000,
-			this._primaryCalendarType
-		).getMonth();
-
-		oNewDate.setMonth(newMonthIndex);
-		this.timestamp = oNewDate.valueOf() / 1000;
-
-		this._hideMonthPicker();
-
-		this._focusFirstDayOfMonth(oNewDate);
-	}
-
 	_focusFirstDayOfMonth(targetDate) {
 		let fistDayOfMonthIndex = -1;
 
 		// focus first day of the month
-		const dayPicker = this.shadowRoot.querySelector("[ui5-daypicker]");
-
-		dayPicker._getVisibleDays(targetDate).forEach((date, index) => {
+		this.dayPicker._getVisibleDays(targetDate).forEach((date, index) => {
 			if (date.getDate() === 1 && (fistDayOfMonthIndex === -1)) {
 				fistDayOfMonthIndex = index;
 			}
 		});
 
-		dayPicker._itemNav.currentIndex = fistDayOfMonthIndex;
-		dayPicker._itemNav.focusCurrent();
+		this.dayPicker._itemNav.currentIndex = fistDayOfMonthIndex;
+		this.dayPicker._itemNav.focusCurrent();
+	}
+
+	_handleSelectedMonthChange(event) {
+		const oNewDate = this._calendarDate;
+		const oFocusedDate = CalendarDate.fromTimestamp(event.detail.timestamp * 1000, this._primaryCalendarType);
+
+		oNewDate.setMonth(oFocusedDate.getMonth());
+		this.timestamp = oNewDate.valueOf() / 1000;
+		this._monthPicker.timestamp = this.timestamp;
+
+		this._hideMonthPicker();
+		this._setDayPickerCurrentIndex(oNewDate, true);
 	}
 
 	_handleSelectedYearChange(event) {
-		const oNewDate = CalendarDate.fromTimestamp(
-			event.detail.timestamp * 1000,
-			this._primaryCalendarType
-		);
-		oNewDate.setMonth(0);
-		oNewDate.setDate(1);
+		const oNewDate = this._calendarDate;
+		const oFocusedDate = CalendarDate.fromTimestamp(event.detail.timestamp * 1000, this._primaryCalendarType);
 
+		oNewDate.setYear(oFocusedDate.getYear());
 		this.timestamp = oNewDate.valueOf() / 1000;
+		this._yearPicker.timestamp = this.timestamp;
 
 		this._hideYearPicker();
+		this._setDayPickerCurrentIndex(oNewDate, true);
+	}
 
-		this._focusFirstDayOfMonth(oNewDate);
+	async _setDayPickerCurrentIndex(calDate, applyFocus) {
+		await RenderScheduler.whenFinished();
+		const currentDate = new CalendarDate(calDate, this._primaryCalendarType);
+		const currentIndex = this.dayPicker.focusableDays.findIndex(item => {
+			return CalendarDate.fromLocalJSDate(new Date(item.timestamp * 1000), this._primaryCalendarType).isSame(currentDate);
+		});
+		this.dayPicker._itemNav.currentIndex = currentIndex;
+		if (applyFocus) {
+			this.dayPicker._itemNav.focusCurrent();
+		} else {
+			this.dayPicker._itemNav.update();
+		}
 	}
 
 	_handleMonthButtonPress() {
@@ -493,7 +519,6 @@ class Calendar extends UI5Element {
 
 	_handleYearButtonPress() {
 		this._hideMonthPicker();
-
 		this[`_${this._yearPicker._hidden ? "show" : "hide"}YearPicker`]();
 	}
 
@@ -542,9 +567,8 @@ class Calendar extends UI5Element {
 		const minCalendarDateYear = CalendarDate.fromTimestamp(this._getMinCalendarDate(), this._primaryCalendarType).getYear();
 
 		// focus first day of the month
-		const dayPicker = this.shadowRoot.querySelector("[ui5-daypicker]");
-		const currentMonthDate = dayPicker._calendarDate.setMonth(dayPicker._calendarDate.getMonth());
-		const lastMonthDate = dayPicker._calendarDate.setMonth(dayPicker._calendarDate.getMonth() - 1);
+		const currentMonthDate = this.dayPicker._calendarDate.setMonth(this.dayPicker._calendarDate.getMonth());
+		const lastMonthDate = this.dayPicker._calendarDate.setMonth(this.dayPicker._calendarDate.getMonth() - 1);
 
 		// set the date to last day of last month
 		currentMonthDate.setDate(-1);
@@ -556,7 +580,7 @@ class Calendar extends UI5Element {
 			return;
 		}
 
-		dayPicker._getVisibleDays(lastMonthDate).forEach((date, index) => {
+		this.dayPicker._getVisibleDays(lastMonthDate).forEach((date, index) => {
 			const isSameDate = currentMonthDate.getDate() === date.getDate();
 			const isSameMonth = currentMonthDate.getMonth() === date.getMonth();
 
@@ -565,14 +589,12 @@ class Calendar extends UI5Element {
 			}
 		});
 
-		const weekDaysCount = 7;
-
 		if (lastDayOfMonthIndex !== -1) {
 			// find the DOM for the last day index
-			const lastDay = dayPicker.shadowRoot.querySelector(".ui5-dp-content").children[parseInt(lastDayOfMonthIndex / weekDaysCount) + 1].children[(lastDayOfMonthIndex % weekDaysCount)];
+			const lastDay = this.dayPicker.shadowRoot.querySelectorAll(".ui5-dp-content .ui5-dp-item")[lastDayOfMonthIndex];
 
 			// update current item in ItemNavigation
-			dayPicker._itemNav.current = lastDayOfMonthIndex;
+			this.dayPicker._itemNav.current = lastDayOfMonthIndex;
 
 			// focus the item
 			lastDay.focus();
@@ -675,6 +697,14 @@ class Calendar extends UI5Element {
 
 		this._calendarWidth = calendarRect.width.toString();
 		this._calendarHeight = calendarRect.height.toString();
+
+		const monthPicker = this.shadowRoot.querySelector("[ui5-monthpicker]");
+		monthPicker.selectedDates = [...this.selectedDates];
+		const currentMonthIndex = monthPicker._itemNav._getItems().findIndex(item => {
+			const calDate = CalendarDate.fromTimestamp(parseInt(item.timestamp) * 1000, this._primaryCalendarType);
+			return calDate.getMonth() === this._calendarDate.getMonth();
+		});
+		monthPicker._itemNav.currentIndex = currentMonthIndex;
 		this._header._isMonthButtonHidden = true;
 	}
 
@@ -691,6 +721,14 @@ class Calendar extends UI5Element {
 
 		this._calendarWidth = calendarRect.width.toString();
 		this._calendarHeight = calendarRect.height.toString();
+
+		const yearPicker = this.shadowRoot.querySelector("[ui5-yearpicker]");
+		yearPicker.selectedDates = [...this.selectedDates];
+		const currentYearIndex = yearPicker._itemNav._getItems().findIndex(item => {
+			const calDate = CalendarDate.fromTimestamp(parseInt(item.timestamp) * 1000, this._primaryCalendarType);
+			return calDate.getYear() === this._calendarDate.getYear();
+		});
+		yearPicker._itemNav.currentIndex = currentYearIndex;
 	}
 
 	_hideMonthPicker() {
@@ -770,21 +808,6 @@ class Calendar extends UI5Element {
 		return false;
 	}
 
-	getFormat() {
-		if (this._isPattern) {
-			this._oDateFormat = DateFormat.getInstance({
-				pattern: this._formatPattern,
-				calendarType: this._primaryCalendarType,
-			});
-		} else {
-			this._oDateFormat = DateFormat.getInstance({
-				style: this._formatPattern,
-				calendarType: this._primaryCalendarType,
-			});
-		}
-		return this._oDateFormat;
-	}
-
 	get styles() {
 		return {
 			main: {
@@ -801,10 +824,6 @@ class Calendar extends UI5Element {
 			MonthPicker,
 			YearPicker,
 		];
-	}
-
-	static async onDefine() {
-		await fetchCldr(getLocale().getLanguage(), getLocale().getRegion(), getLocale().getScript());
 	}
 }
 

@@ -24,7 +24,6 @@ import {
 	VALUE_STATE_ERROR,
 	VALUE_STATE_WARNING,
 	INPUT_SUGGESTIONS_TITLE,
-	SELECT_ROLE_DESCRIPTION,
 } from "./generated/i18n/i18n-defaults.js";
 import Option from "./Option.js";
 import Label from "./Label.js";
@@ -70,7 +69,7 @@ const metadata = {
 		"default": {
 			propertyName: "options",
 			type: HTMLElement,
-			listenFor: { include: ["*"] },
+			invalidateOnChildChange: true,
 		},
 
 		/**
@@ -244,6 +243,15 @@ const metadata = {
  * Once the drop-down is opened, you can use the <code>UP</code> and <code>DOWN</code> arrow keys
  * to navigate through the available options and select one by pressing the <code>Space</code> or <code>Enter</code> keys.
  * <br>
+ *
+ * <h3>Stable DOM Refs</h3>
+ *
+ * In the context of <code>ui5-select</code>, you can provide a custom stable DOM ref for:
+ * <ul>
+ * <li>Every <code>ui5-option</code> that you provide.
+ * Example: <code><ui5-option stable-dom-ref="option1"></ui5-option></code></li>
+ * </ul>
+ *
  * <h3>ES6 Module Import</h3>
  * <code>import "@ui5/webcomponents/dist/Select";</code>
  * <br>
@@ -362,6 +370,7 @@ class Select extends UI5Element {
 				value: opt.value,
 				textContent: opt.textContent,
 				id: opt._id,
+				stableDomRef: opt.stableDomRef,
 			};
 		});
 
@@ -559,10 +568,6 @@ class Select extends UI5Element {
 
 	get isDisabled() {
 		return this.disabled || undefined;
-	}
-
-	get selectRoleDescription() {
-		return this.i18nBundle.getText(SELECT_ROLE_DESCRIPTION);
 	}
 
 	get _headerTitleText() {

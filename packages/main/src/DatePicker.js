@@ -25,7 +25,10 @@ import { isPhone, isIE } from "@ui5/webcomponents-base/dist/Device.js";
 import { fetchI18nBundle, getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import "@ui5/webcomponents-icons/dist/appointment-2.js";
 import "@ui5/webcomponents-icons/dist/decline.js";
+import CalendarSelection from "@ui5/webcomponents-base/dist/types/CalendarSelection.js";
+import RenderScheduler from "@ui5/webcomponents-base/dist/RenderScheduler.js";
 import { DATEPICKER_OPEN_ICON_TITLE, DATEPICKER_DATE_ACC_TEXT, INPUT_SUGGESTIONS_TITLE } from "./generated/i18n/i18n-defaults.js";
+import { getMaxCalendarDate, getMinCalendarDate } from "./util/DateTime.js";
 import Icon from "./Icon.js";
 import Button from "./Button.js";
 import ResponsivePopover from "./ResponsivePopover.js";
@@ -419,7 +422,8 @@ class DatePicker extends UI5Element {
 					calendar._hideYearPicker();
 				}
 			},
-			afterOpen: () => {
+			afterOpen: async () => {
+				await RenderScheduler.whenFinished();
 				const calendar = this.calendar;
 
 				if (!calendar) {
@@ -452,6 +456,7 @@ class DatePicker extends UI5Element {
 
 		this._calendar = {
 			onSelectedDatesChange: this._handleCalendarChange.bind(this),
+			selection: CalendarSelection.Single,
 			selectedDates: [],
 		};
 
@@ -479,9 +484,10 @@ class DatePicker extends UI5Element {
 			this.maxDate = null;
 			console.warn(`In order for the "maxDate" property to have effect, you should enter valid date format`); // eslint-disable-line
 		}
-		if (this._checkValueValidity(this.value) || this.checkRealValueValidity()) {
+
+		if (this._checkValueValidity(this.value)) {
 			this._changeCalendarSelection();
-		} else {
+		} else if (this.value !== "") {
 			this._calendar.selectedDates = [];
 		}
 
@@ -674,13 +680,6 @@ class DatePicker extends UI5Element {
 		return this.isValid(value) && this.isInValidRange(this._getTimeStampFromString(value));
 	}
 
-	/**
-	 * This method is used in the derived classes
-	 */
-	checkRealValueValidity() {
-		return false;
-	}
-
 	_click(event) {
 		if (isPhone()) {
 			this.responsivePopover.open(this);
@@ -802,18 +801,19 @@ class DatePicker extends UI5Element {
 	}
 
 	getFormat() {
+		let dateFormat;
 		if (this._isPattern) {
-			this._oDateFormat = DateFormat.getInstance({
+			dateFormat = DateFormat.getInstance({
 				pattern: this._formatPattern,
 				calendarType: this._primaryCalendarType,
 			});
 		} else {
-			this._oDateFormat = DateFormat.getInstance({
+			dateFormat = DateFormat.getInstance({
 				style: this._formatPattern,
 				calendarType: this._primaryCalendarType,
 			});
 		}
-		return this._oDateFormat;
+		return dateFormat;
 	}
 
 	get accInfo() {
@@ -825,7 +825,6 @@ class DatePicker extends UI5Element {
 			"ariaOwns": `${this._id}-responsive-popover`,
 			"ariaExpanded": this.isOpen(),
 			"ariaDescription": this.dateAriaDescription,
-			"ariaRequired": this.required,
 			"ariaLabel": getEffectiveAriaLabelText(this),
 		};
 	}
@@ -839,22 +838,11 @@ class DatePicker extends UI5Element {
 	}
 
 	_getMinCalendarDate() {
-		const minDate = new CalendarDate(1, 0, 1, this._primaryCalendarType);
-		minDate.setYear(1);
-		minDate.setMonth(0);
-		minDate.setDate(1);
-		return minDate.valueOf();
+		return getMinCalendarDate(this._primaryCalendarType);
 	}
 
 	_getMaxCalendarDate() {
-		const maxDate = new CalendarDate(1, 0, 1, this._primaryCalendarType);
-		maxDate.setYear(9999);
-		maxDate.setMonth(11);
-		const tempDate = new CalendarDate(maxDate, this._primaryCalendarType);
-		tempDate.setDate(1);
-		tempDate.setMonth(tempDate.getMonth() + 1, 0);
-		maxDate.setDate(tempDate.getDate());// 31st for Gregorian Calendar
-		return maxDate.valueOf();
+		return getMaxCalendarDate(this._primaryCalendarType);
 	}
 
 	get openIconTitle() {
@@ -909,7 +897,7 @@ class DatePicker extends UI5Element {
 		this._updateValueCalendarSelectedDatesChange(newValue);
 
 		this._calendar.timestamp = newValue;
-		this._calendar.selectedDates = event.detail.dates;
+		this._calendar.selectedDates = [...event.detail.dates];
 		this._focusInputAfterClose = true;
 
 		if (this.isInValidRange(this._getTimeStampFromString(this.value))) {
@@ -976,20 +964,16 @@ class DatePicker extends UI5Element {
 		}
 	}
 
-	_changeCalendarSelection(focusTimestamp) {
+	_changeCalendarSelection() {
 		if (this._calendarDate.getYear() < 1) {
 			// 0 is a valid year, but we cannot display it
 			return;
 		}
 
-		const oCalDate = this._calendarDate;
-		const timestamp = focusTimestamp || oCalDate.valueOf() / 1000;
-
+		const timestamp = this._calendarDate.valueOf() / 1000;
 		this._calendar = Object.assign({}, this._calendar);
 		this._calendar.timestamp = timestamp;
-		if (this.value) {
-			this._calendar.selectedDates = [timestamp];
-		}
+		this._calendar.selectedDates = this.value ? [timestamp] : [];
 	}
 
 	/**

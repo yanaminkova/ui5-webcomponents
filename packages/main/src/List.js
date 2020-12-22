@@ -381,8 +381,12 @@ class List extends UI5Element {
 		return `${this._id}-header`;
 	}
 
+	get hasData() {
+		return this.getSlottedNodes("items").length !== 0;
+	}
+
 	get showNoDataText() {
-		return this.items.length === 0 && this.noDataText;
+		return !this.hasData && this.noDataText;
 	}
 
 	get showBusy() {
@@ -412,9 +416,8 @@ class List extends UI5Element {
 	initItemNavigation() {
 		this._itemNavigation = new ItemNavigation(this, {
 			navigationMode: NavigationMode.Vertical,
+			getItemsCallback: () => this.getSlottedNodes("items"),
 		});
-
-		this._itemNavigation.getItemsCallback = () => this.getSlottedNodes("items");
 	}
 
 	prepareListItems() {

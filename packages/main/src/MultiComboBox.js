@@ -24,7 +24,9 @@ import ResponsivePopover from "./ResponsivePopover.js";
 import List from "./List.js";
 import StandardListItem from "./StandardListItem.js";
 import ToggleButton from "./ToggleButton.js";
+import * as Filters from "./ComboBoxFilters.js";
 import Button from "./Button.js";
+
 import {
 	VALUE_STATE_SUCCESS,
 	VALUE_STATE_ERROR,
@@ -71,7 +73,7 @@ const metadata = {
 		"default": {
 			propertyName: "items",
 			type: HTMLElement,
-			listenFor: { include: ["*"] },
+			invalidateOnChildChange: true,
 		},
 
 		/**
@@ -202,6 +204,19 @@ const metadata = {
 		},
 
 		/**
+		 * Defines the filter type of the <code>ui5-multi-combobox</code>.
+		 * Available options are: <code>StartsWithPerTerm</code>, <code>StartsWith</code>, <code>Contains</code> and <code>None</code>.
+		 *
+		 * @type {string}
+		 * @defaultvalue "StartsWithPerTerm"
+		 * @public
+		 */
+		filter: {
+			type: String,
+			defaultValue: "StartsWithPerTerm",
+		},
+
+		/**
 		 * Indicates whether the dropdown is open. True if the dropdown is open, false otherwise.
 		 *
 		 * @type {boolean}
@@ -321,6 +336,12 @@ const metadata = {
  * <li> Left/Right arrow keys - moves the focus selection form the currently focused token to the previous/next one (if available). </li>
  * <li> Delete -  deletes the token and focuses the previous token. </li>
  * <li> Backspace -  deletes the token and focus the next token. </li>
+ * </ul>
+ *
+ * In the context of <code>ui5-multi-combobox</code>, you can provide a custom stable DOM ref for:
+ * <ul>
+ * <li>Every <code>ui5-mcb-item</code> that you provide.
+ * Example: <code><ui5-mcb-item stable-dom-ref="item1"></ui5-mcb-item></code></li>
  * </ul>
  *
  * <h3>ES6 Module Import</h3>
@@ -586,12 +607,8 @@ class MultiComboBox extends UI5Element {
 		}
 	}
 
-	_filterItems(value) {
-		return this.items.filter(item => {
-			return item.text
-				&& item.text.toLowerCase().startsWith(value.toLowerCase())
-				&& (this.filterSelected ? item.selected : true);
-		});
+	_filterItems(str) {
+		return (Filters[this.filter] || Filters.StartsWithPerTerm)(str, this.items);
 	}
 
 	_toggle() {

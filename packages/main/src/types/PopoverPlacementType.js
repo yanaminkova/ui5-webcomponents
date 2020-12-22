@@ -49,6 +49,6 @@ class PopoverPlacementType extends DataType {
 	}
 }
 
-PopoverPlacementType.generataTypeAcessors(PopoverPlacementTypes);
+PopoverPlacementType.generateTypeAccessors(PopoverPlacementTypes);
 
 export default PopoverPlacementType;

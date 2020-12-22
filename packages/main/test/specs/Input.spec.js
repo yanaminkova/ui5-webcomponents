@@ -23,7 +23,8 @@ describe("Attributes propagation", () => {
 	});
 
 	it("Required attribute is propagated properly", () => {
-		assert.ok(browser.$("#input-required").shadow$(".ui5-input-inner").getAttribute("required"), "Required property was propagated");
+		assert.strictEqual(browser.$("#input-required").shadow$(".ui5-input-inner").getAttribute("aria-required"), "true", "Aria-required attribute is set correctly");
+		assert.strictEqual(browser.$("#input-number").shadow$(".ui5-input-inner").getAttribute("aria-required"), "false", "Aria-required attribute is set correctly");
 	});
 
 	it("Type attribute is propagated properly", () => {
@@ -287,6 +288,13 @@ describe("Input general interaction", () => {
 		inputShadowRef.keys("a");
 
 		assert.ok(respPopover, "Responsive popover with valueStateMessage should be opened.");
+	});
+
+	it("Checks if aria-describedby is renderd if not neccessary", () => {
+		const input = browser.$("#input-max-length"); // Input with no show-suggestions attribute
+		const innerInput = input.shadow$("input");
+
+		assert.notOk(innerInput.getAttribute("aria-describedby"), "aria-describedby is not rendered");
 	});
 
 	it("Checks if aria-label is reflected in the shadow DOM", () => {
